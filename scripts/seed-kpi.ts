@@ -379,6 +379,7 @@ async function seed() {
   console.log("\n=== Seeding Bonus Scale ===");
   for (let i = 0; i < bonusScale.length; i++) {
     const scale = bonusScale[i];
+    if (!scale) continue;
     try {
       await db.collection("bonus_scale").doc(`scale_${i + 1}`).set(scale);
       console.log(`  ✓ Created bonus scale: ${scale.label} (${scale.multiplier})`);

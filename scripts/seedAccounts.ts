@@ -71,7 +71,7 @@ const employees = [
 // Helpers
 // ──────────────────────────────────────────────────────────────
 
-function slugify(name) {
+function slugify(name: string) {
   return name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -81,15 +81,15 @@ function slugify(name) {
     .replace(/\s+/g, ".");
 }
 
-function makeEmail(emp) {
+function makeEmail(emp: { name: string; code: string }) {
   return `${slugify(emp.name)}.${emp.code}@kpi.local`.toLowerCase();
 }
 
-function makeDisplayName(emp) {
+function makeDisplayName(emp: { name: string }) {
   return emp.name.replace(/\s*\([^)]*\)\s*/g, "").trim();
 }
 
-function roleEmoji(role, program) {
+function roleEmoji(role: string, program?: string) {
   if (role === "BOARD") return "👔 BOARD";
   if (role === "OPERATION_MANAGER") return "🏢 OP";
   return `📚 PM ${program ?? ""}`;
