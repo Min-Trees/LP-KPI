@@ -72,7 +72,7 @@ interface BonusScale {
   label: string;
 }
 
-const CRITERIA_BASE_RULES: Record<string, KpiRule[]> = {
+const CRITERIA_BASE_RULES: Record<string, KpiRule[] | undefined> = {
   noi_quy: [
     {
       code: "NQ_01",
@@ -310,24 +310,24 @@ function buildTemplate(
 
 const templates: KpiTemplate[] = [
   buildTemplate("template_manager", "manager", "KPI Ban Giám Hiệu (Manager)", [
-    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy },
-    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn, chất lượng giảng dạy", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon },
-    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong },
+    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy! },
+    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn, chất lượng giảng dạy", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon! },
+    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong! },
   ]),
   buildTemplate("template_office_support", "office_support", "KPI Văn phòng + Hỗ trợ", [
-    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy },
-    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon },
-    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ/Thái độ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong },
+    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy! },
+    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon! },
+    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ/Thái độ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong! },
   ]),
   buildTemplate("template_teacher_hs", "teacher_hs", "KPI Giáo viên Hành chính Sự nghiệp", [
-    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy },
-    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn, chất lượng giảng dạy", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon },
-    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong },
+    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy! },
+    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn, chất lượng giảng dạy", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon! },
+    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong! },
   ]),
   buildTemplate("template_teacher_st", "teacher_st", "KPI Giáo viên Sự tình nguyện", [
-    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy },
-    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn, chất lượng giảng dạy", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon },
-    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong },
+    { id: "c1", code: "NOI_QUY", name: "Nội quy và kỷ luật", weight: 0.4, rules: CRITERIA_BASE_RULES.noi_quy! },
+    { id: "c2", code: "CHUYEN_MON", name: "Chuyên môn, chất lượng giảng dạy", weight: 0.3, rules: CRITERIA_BASE_RULES.chuyen_mon! },
+    { id: "c3", code: "CHAT_LUONG", name: "Chất lượng dịch vụ", weight: 0.3, rules: CRITERIA_BASE_RULES.chat_luong! },
   ]),
 ];
 

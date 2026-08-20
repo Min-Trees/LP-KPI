@@ -612,7 +612,7 @@ async function seedEmployees() {
       await db.doc(`employees/${uid}`).set(employeeData, { merge: true });
       await db.doc(`users/${uid}`).set(userData, { merge: true });
       
-      const branchLabel = emp.branch === "HEADQUARTERS" ? "HQ" : "LC";
+      const branchLabel = emp.branch === "LAI_THIEU" ? "LT" : "LC";
       const program = emp.program ? ` (${emp.program})` : "";
       console.log(`  ✓ LC-${String(employeeIndex).padStart(3, "0")} | ${emp.displayName} | ${branchLabel}${program}`);
       docCreated++;
@@ -628,7 +628,9 @@ async function seedEmployees() {
   const byBranch = { LAI_THIEU: 0, LAO_CAI: 0 };
   for (const emp of employees) {
     byRole[emp.role]++;
-    byKpi[emp.kpiType]++;
+    if (emp.kpiType in byKpi) {
+      byKpi[emp.kpiType as keyof typeof byKpi]++;
+    }
     byBranch[emp.branch]++;
   }
 
