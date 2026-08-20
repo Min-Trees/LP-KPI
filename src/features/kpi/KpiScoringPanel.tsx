@@ -4,7 +4,7 @@ import { computeCriterionRecord, computeKpiScore, resolveRankAndBonus } from "@/
 import { useRankingRules } from "@/api/hooks";
 import { defaultRankingRules } from "@/utils/kpiCalculator";
 import { RANK_COLOR, RANK_LABEL } from "@/utils/labels";
-import { X, Save, Send, ChevronLeft, ChevronRight, Check, Plus } from "lucide-react";
+import { X, Save, Send, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { STATUS_LABEL, STATUS_COLOR } from "@/utils/labels";
 
 interface Props {
@@ -110,6 +110,7 @@ export function KpiScoringPanel({
   if (!open) return null;
 
   const activeCriterion = template.criteria[activeCriterionIdx];
+  if (!activeCriterion) return null;
   const activeRecord = criteriaRecords[activeCriterionIdx];
 
   // events for current criterion

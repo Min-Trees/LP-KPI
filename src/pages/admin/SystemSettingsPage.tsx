@@ -19,10 +19,12 @@ export default function SystemSettingsPage() {
   const create = useCreatePeriod();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
+    name: "",
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     startDate: "",
     endDate: "",
+    deadline: "",
     scoringDeadline: "",
     approvalDeadline: "",
     status: "UPCOMING" as KpiPeriodStatus,
@@ -30,10 +32,12 @@ export default function SystemSettingsPage() {
 
   async function createPeriod() {
     await create.mutateAsync({
+      name: form.name,
       month: form.month,
       year: form.year,
       startDate: form.startDate,
       endDate: form.endDate,
+      deadline: form.deadline,
       scoringDeadline: form.scoringDeadline,
       approvalDeadline: form.approvalDeadline,
       status: form.status,
@@ -60,6 +64,7 @@ export default function SystemSettingsPage() {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-slate-100 text-left text-slate-700">
+              <th className="px-3 py-2">Tên kỳ</th>
               <th className="px-3 py-2">Tháng/Năm</th>
               <th className="px-3 py-2">Bắt đầu</th>
               <th className="px-3 py-2">Kết thúc</th>
@@ -71,7 +76,8 @@ export default function SystemSettingsPage() {
           <tbody>
             {periods.map((p: KpiPeriod) => (
               <tr key={p.id} className="border-b border-slate-100">
-                <td className="px-3 py-2 font-medium">{p.month}/{p.year}</td>
+                <td className="px-3 py-2 font-medium">{p.name || `${p.month}/${p.year}`}</td>
+                <td className="px-3 py-2">{p.month}/{p.year}</td>
                 <td className="px-3 py-2">{formatDate(p.startDate)}</td>
                 <td className="px-3 py-2">{formatDate(p.endDate)}</td>
                 <td className="px-3 py-2">{formatDate(p.scoringDeadline)}</td>
@@ -80,7 +86,7 @@ export default function SystemSettingsPage() {
               </tr>
             ))}
             {periods.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-slate-500">Chưa có kỳ KPI.</td></tr>
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">Chưa có kỳ KPI.</td></tr>
             )}
           </tbody>
         </table>
@@ -91,6 +97,10 @@ export default function SystemSettingsPage() {
           <div className="card w-full max-w-md space-y-3">
             <h2 className="text-lg font-semibold">Tạo kỳ KPI mới</h2>
             <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="label">Tên kỳ</label>
+                <input type="text" className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="VD: Tháng 8/2026" />
+              </div>
               <div>
                 <label className="label">Tháng</label>
                 <input type="number" min={1} max={12} className="input" value={form.month} onChange={(e) => setForm({ ...form, month: Number(e.target.value) })} />
@@ -106,6 +116,10 @@ export default function SystemSettingsPage() {
               <div className="col-span-2">
                 <label className="label">Ngày kết thúc</label>
                 <input type="date" className="input" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Hạn chốt</label>
+                <input type="date" className="input" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
               </div>
               <div>
                 <label className="label">Hạn chấm</label>

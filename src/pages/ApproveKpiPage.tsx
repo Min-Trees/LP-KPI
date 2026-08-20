@@ -6,7 +6,6 @@ import {
   Square,
   User,
   AlertCircle,
-  ChevronDown,
 } from "lucide-react";
 import { useApproveKpiRecord, useRejectKpiRecord, useEmployees, useKpiPeriods, useAllKpiRecords } from "@/api/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";

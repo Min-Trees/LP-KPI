@@ -33,6 +33,7 @@ export interface KpiEvent {
   note?: string;
   createdBy: string;
   createdAt: string;
+  criterionName?: string;
 }
 
 export interface KpiCriterionRecord {

@@ -27,7 +27,7 @@ interface Props {
   programFilter?: "HS" | "ST";
 }
 
-export function KpiSheetPage({ templateType, title, programFilter }: Props) {
+export function KpiSheetPage({ templateType, title, programFilter: _programFilter }: Props) {
   const { appUser } = useAuth();
   const userIsAdmin = isAdmin(appUser?.role);
   const toast = useToast();
@@ -89,7 +89,7 @@ export function KpiSheetPage({ templateType, title, programFilter }: Props) {
   const currentRecord = selectedEmployee
     ? records.find(
         (r) => r.employeeId === selectedEmployee.id && r.periodId === openPeriod?.id,
-      )
+      ) ?? null
     : null;
 
   if (loadingTpl || loadingEmp) {

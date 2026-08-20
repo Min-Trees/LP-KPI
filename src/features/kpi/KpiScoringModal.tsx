@@ -36,7 +36,7 @@ export function KpiScoringModal({
   template,
   employee,
   record,
-  periodDays,
+  periodDays: _periodDays,
   open,
   readOnly,
   onClose,
@@ -188,7 +188,6 @@ export function KpiScoringModal({
 
     let stt = 1;
     template.criteria.forEach((criterion, ci) => {
-      const rec = criteriaRecords[ci];
       const critEvents = events.filter((e) =>
         criterion.rules.some((r) => r.code === e.ruleCode),
       );

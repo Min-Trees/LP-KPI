@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   ResponsiveContainer,
   BarChart,
@@ -26,6 +26,7 @@ import { useCurrentPeriod } from "@/api/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { RANK_COLOR, RANK_LABEL, formatDate } from "@/utils";
 import { ROLE } from "@/constants/roles";
+import type { Role } from "@/constants/roles";
 
 function StatCard({
   icon,
@@ -54,7 +55,6 @@ function StatCard({
 
 export default function DashboardPage() {
   const { appUser } = useAuth();
-  const location = useLocation();
   const { data: employees = [], isLoading: l1 } = useEmployees();
   const period = useCurrentPeriod();
   const { data: records = [], isLoading: l3 } = useKpiRecords(period?.id);
@@ -71,7 +71,7 @@ export default function DashboardPage() {
       .sort((a, b) => b.kpiScore - a.kpiScore)
       .slice(0, 5);
     const need = locked
-      .filter((r) => r.rank === "CAN_CAI_THIEN" || r.rank === "YEU")
+      .filter((r) => r.rank === "CAN_CAI_THIEN")
       .sort((a, b) => a.kpiScore - b.kpiScore)
       .slice(0, 5);
 
@@ -112,7 +112,6 @@ export default function DashboardPage() {
   }
 
   const isAdmin = appUser?.role === ROLE.ADMIN;
-  const isBoard = appUser?.role === ROLE.BOARD || appUser?.role === ROLE.ADMIN;
 
   return (
     <div className="space-y-5">
