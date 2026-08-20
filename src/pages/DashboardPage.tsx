@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import {
+  useMemo,
+} from "react";
 import { Link } from "react-router-dom";
 import {
   ResponsiveContainer,
@@ -26,7 +28,6 @@ import { useCurrentPeriod } from "@/api/hooks";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { RANK_COLOR, RANK_LABEL, formatDate } from "@/utils";
 import { ROLE } from "@/constants/roles";
-import type { Role } from "@/constants/roles";
 
 function StatCard({
   icon,
@@ -159,7 +160,7 @@ export default function DashboardPage() {
               { to: "/admin/employees", label: "Quản lý nhân sự", icon: Users, roles: [ROLE.ADMIN] },
               { to: "/admin/kpi-templates", label: "Mẫu KPI", icon: Settings, roles: [ROLE.ADMIN] },
             ].map(({ to, label, icon: Icon, roles }) => {
-              if (!appUser?.role || !roles.includes(appUser.role)) return null;
+              if (!appUser?.role || !(roles as readonly string[]).includes(appUser.role)) return null;
               return (
                 <Link
                   key={to}

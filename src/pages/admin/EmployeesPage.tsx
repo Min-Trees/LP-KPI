@@ -262,7 +262,7 @@ export default function EmployeesPage() {
                 <select className="input" {...register("program")}>
                   <option value="">-- Không --</option>
                   {ALL_PROGRAMS.map((p) => (
-                    <option key={p} value={p}>{PROGRAM_LABEL[p]}</option>
+                    <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
               </Field>

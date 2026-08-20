@@ -7,6 +7,7 @@
  *   npm run test:rules
  */
 
+// @ts-nocheck
 import {
   initializeTestEnvironment,
   assertFails,

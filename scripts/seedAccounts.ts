@@ -71,7 +71,7 @@ const employees = [
 // Helpers
 // ──────────────────────────────────────────────────────────────
 
-function slugify(name: string) {
+function slugify(name: string): string {
   return name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -81,24 +81,24 @@ function slugify(name: string) {
     .replace(/\s+/g, ".");
 }
 
-function makeEmail(emp: { name: string; code: string }) {
+function makeEmail(emp: { name: string; code: string }): string {
   return `${slugify(emp.name)}.${emp.code}@kpi.local`.toLowerCase();
 }
 
-function makeDisplayName(emp: { name: string }) {
+function makeDisplayName(emp: { name: string }): string {
   return emp.name.replace(/\s*\([^)]*\)\s*/g, "").trim();
 }
 
-function roleEmoji(role: string, program?: string) {
+function roleEmoji(role: string, program?: string): string {
   if (role === "BOARD") return "👔 BOARD";
   if (role === "OPERATION_MANAGER") return "🏢 OP";
   return `📚 PM ${program ?? ""}`;
 }
 
-async function prompt(question) {
+async function prompt(question: string): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(question, (ans) => { rl.close(); resolve(ans); });
+      rl.question(question, (ans: string) => { rl.close(); resolve(ans); });
   });
 }
 
@@ -149,7 +149,7 @@ async function main() {
 ╚══════════════════════════════════════════════════════════╝
 `);
 
-  const confirm = await prompt(
+  const confirm: string = await prompt(
     "⚠  Tạo " + employees.length + " accounts + Firestore docs? (gõ YES để xác nhận): ",
   );
   if (confirm.trim() !== "YES") {
@@ -159,7 +159,7 @@ async function main() {
 
   // ── Check existing users ───────────────────────────────
   const existing = await auth.listUsers();
-  const existingEmails = new Set(existing.users.map((u) => u.email ?? ""));
+  const existingEmails = new Set(existing.users.map((u: { email?: string }) => u.email ?? ""));
 
   const created = [];
   const skipped = [];

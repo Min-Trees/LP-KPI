@@ -5,7 +5,12 @@ export const PROGRAM = {
 
 export type Program = (typeof PROGRAM)[keyof typeof PROGRAM];
 
-export const ALL_PROGRAMS: Program[] = Object.values(PROGRAM);
+export const ALL_PROGRAMS: { value: Program; label: string }[] = (Object.entries(PROGRAM) as [Program, Program][]).map(
+  ([value, _]) => ({
+    value,
+    label: PROGRAM_LABEL[value],
+  })
+);
 
 export const PROGRAM_LABEL: Record<Program, string> = {
   HS: "Hệ Song ngữ",
