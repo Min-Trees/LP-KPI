@@ -121,8 +121,7 @@ export default function PersonalKpiPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    const u = appUser ?? {};
-    const safe = (u.email ?? "me").replace(/[^a-z0-9]/gi, "_");
+    const safe = (appUser?.email ?? "me").replace(/[^a-z0-9]/gi, "_");
     link.download = `KPI_CaNhan_${safe}_${new Date().toISOString().split("T")[0]}.csv`;
     document.body.appendChild(link);
     link.click();
@@ -258,7 +257,7 @@ export default function PersonalKpiPage() {
                             <div
                               className="h-full rounded-full bg-brand-500"
                               style={{
-                                width: `${Math.min(100, (rec.kpiScore / rules.bands[0].max) * 100)}%`,
+                                width: `${Math.min(100, (rec.kpiScore / (rules.bands[0]?.max ?? 100)) * 100)}%`,
                               }}
                             />
                           </div>

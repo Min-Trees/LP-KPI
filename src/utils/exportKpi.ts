@@ -29,7 +29,9 @@ function escapeCSV(value: string): string {
 
 function toCSV(rows: ExportRow[]): string {
   if (rows.length === 0) return "";
-  const headers = Object.keys(rows[0]);
+  const firstRow = rows[0];
+  if (!firstRow) return "";
+  const headers = Object.keys(firstRow);
   const headerLine = headers.map(escapeCSV).join(",");
   const dataLines = rows.map((row) =>
     headers

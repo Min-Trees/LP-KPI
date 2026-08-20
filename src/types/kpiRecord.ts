@@ -4,10 +4,12 @@ export type KpiPeriodStatus = "UPCOMING" | "OPEN" | "LOCKED" | "CLOSED";
 
 export interface KpiPeriod {
   id: string;
+  name: string;
   month: number;
   year: number;
   startDate: string;
   endDate: string;
+  deadline: string;
   scoringDeadline: string;
   approvalDeadline: string;
   status: KpiPeriodStatus;
