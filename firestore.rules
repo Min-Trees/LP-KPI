@@ -1,0 +1,242 @@
+rules_version = '2';
+
+// =====================================================
+// Firestore Security Rules — KPI Management System
+// =====================================================
+// Schema: xem analysis/ANALYSIS.md
+// Roles: ADMIN, BOARD, OPERATION_MANAGER, PROGRAM_MANAGER, EMPLOYEE
+// =====================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===================================================
+    // Helper functions
+    // ===================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function role() {
+      return isSignedIn() && userDoc() != null ? userDoc().role : '';
+    }
+
+    function program() {
+      return isSignedIn() && userDoc() != null ? userDoc().program : '';
+    }
+
+    function branch() {
+      return isSignedIn() && userDoc() != null ? userDoc().branch : '';
+    }
+
+    function status() {
+      return isSignedIn() && userDoc() != null ? userDoc().status : '';
+    }
+
+    function isActive() {
+      return isSignedIn() && status() == 'ACTIVE';
+    }
+
+    function isAdmin()   { return isActive() && role() == 'ADMIN'; }
+    function isBoard()   { return isActive() && role() == 'BOARD'; }
+    function isOP()      { return isActive() && role() == 'OPERATION_MANAGER'; }
+    function isPM()      { return isActive() && role() == 'PROGRAM_MANAGER'; }
+    function isEmployee(){ return isActive() && role() == 'EMPLOYEE'; }
+
+    function isStaff() {
+      return isAdmin() || isBoard() || isOP() || isPM();
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Kiểm tra thay đổi chỉ chứa các field được phép
+    function onlyChangedKeys(allowedKeys) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(allowedKeys);
+    }
+
+    // ===================================================
+    // users/{uid}
+    // ===================================================
+    // - User đọc được profile của mình + user khác (để hiển thị tên)
+    // - User cập nhật được profile mình, nhưng KHÔNG được đổi role/status/program
+    // - Admin CRUD tất cả
+    match /users/{userId} {
+      allow read: if isSignedIn();
+
+      allow create: if isAdmin()
+                    && request.resource.data.role in ['ADMIN','BOARD','OPERATION_MANAGER','PROGRAM_MANAGER','EMPLOYEE']
+                    && request.resource.data.status in ['ACTIVE','INACTIVE'];
+
+      // User tự cập nhật, trừ các field nhạy cảm
+      allow update: if (isAdmin()
+                       || (isSelf(userId)
+                           && onlyChangedKeys(['displayName','photoURL','phone','email'])));
+
+      allow delete: if isAdmin();
+    }
+
+    // ===================================================
+    // employees/{employeeId}
+    // ===================================================
+    // Mirror của users, dùng cho quản lý nhân sự chi tiết
+    match /employees/{employeeId} {
+      allow read: if true; // public lookup - không cần auth
+      allow write: if isAdmin();
+    }
+
+    // ===================================================
+    // kpi_templates/{templateId}
+    // ===================================================
+    // Template cấu hình tiêu chí/trọng số/rules
+    match /kpi_templates/{templateId} {
+      allow read: if true; // public lookup
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ===================================================
+    // kpi_versions/{versionId}
+    // ===================================================
+    // Lịch sử snapshot template — chỉ Admin ghi
+    match /kpi_versions/{versionId} {
+      allow read: if true; // public lookup
+      allow create: if isAdmin();
+      allow update, delete: if false; // immutable
+    }
+
+    // ===================================================
+    // kpi_periods/{periodId}
+    // ===================================================
+    // Kỳ KPI (tháng/năm)
+    match /kpi_periods/{periodId} {
+      allow read: if true; // public lookup
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ===================================================
+    // kpi_records/{recordId}
+    // ===================================================
+    // Workflow: DRAFT → IN_PROGRESS → SUBMITTED → APPROVED → LOCKED
+    // (hoặc SUBMITTED → REJECTED → IN_PROGRESS)
+    // Branch-aware: OP/PM chỉ truy cập records thuộc cơ sở của họ
+    match /kpi_records/{recordId} {
+
+      // ---------- READ ----------
+      allow read: if isAdmin() || isBoard()
+                  || (isOP() && resource.data.templateType in ['office_support','manager'] && resource.data.branch == branch())
+                  || (isPM() && (
+                       (resource.data.templateType == 'teacher_hs' && program() == 'HS' && resource.data.branch == branch()) ||
+                       (resource.data.templateType == 'teacher_st' && program() == 'ST' && resource.data.branch == branch())
+                     ))
+                  || (isEmployee() && resource.data.employeeId == request.auth.uid)
+                  // PUBLIC lookup - chỉ record đã duyệt/khóa
+                  || (resource.data.status in ['APPROVED','LOCKED'])
+                  // Employee xem tất cả records của chính mình (public lookup page)
+                  || (request.auth == null && resource.data.employeeId != null);
+
+      // ---------- CREATE ----------
+      // Role nào được tạo record cho templateType nào + branch:
+      //   - BOARD        → manager (tất cả branches)
+      //   - OP           → office_support (branch của mình)
+      //   - PM (HS)      → teacher_hs (branch của mình)
+      //   - PM (ST)      → teacher_st (branch của mình)
+      //   - ADMIN        → tất cả (mọi branch, mọi program) — KHÔNG bị ràng buộc
+      allow create: if isActive() && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == 'IN_PROGRESS'
+                    && (
+                      (isBoard() && request.resource.data.templateType == 'manager')
+                      || (isOP()   && request.resource.data.templateType == 'office_support' && request.resource.data.branch == branch())
+                      || (isPM()
+                          && ((request.resource.data.templateType == 'teacher_hs' && program() == 'HS' && request.resource.data.branch == branch())
+                              || (request.resource.data.templateType == 'teacher_st' && program() == 'ST' && request.resource.data.branch == branch())))
+                      || isAdmin()
+                    );
+
+      // ---------- UPDATE ----------
+      // Hai loại update:
+      //   1) Scoring (criteria/events/kpiScore/note) - role tương ứng với templateType + branch
+      //      chỉ khi status hiện tại != APPROVED && != LOCKED
+      //   2) Submit (status: IN_PROGRESS -> SUBMITTED) - role sở hữu
+      //   3) Approve (status: SUBMITTED -> APPROVED|LOCKED) - chỉ BOARD/ADMIN
+      //   4) Reject (status: SUBMITTED -> IN_PROGRESS|REJECTED) - chỉ BOARD/ADMIN
+      allow update: if isActive() && (
+        // (3)(4) Approve/Reject — chỉ đổi status + approvedBy + approvedAt + note
+        (
+          (isBoard() || isAdmin())
+          && onlyChangedKeys(['status','approvedBy','approvedAt','note','updatedAt'])
+          && request.resource.data.status in ['APPROVED','LOCKED','IN_PROGRESS','REJECTED']
+          && (resource.data.status == 'SUBMITTED'
+              || (isAdmin() && resource.data.status in ['IN_PROGRESS','DRAFT']))
+        )
+        ||
+        // (1)(2) Scoring & Submit — ADMIN bypass branch, các role khác phải khớp branch
+        (
+          (isAdmin() || (resource.data.createdBy == request.auth.uid && resource.data.branch == branch()))
+          && resource.data.status in ['DRAFT','IN_PROGRESS','REJECTED']
+          && request.resource.data.status in ['IN_PROGRESS','SUBMITTED']
+          && (
+            (isBoard() && resource.data.templateType == 'manager')
+            || (isOP()   && resource.data.templateType == 'office_support')
+            || (isPM()
+                && ((resource.data.templateType == 'teacher_hs' && program() == 'HS')
+                    || (resource.data.templateType == 'teacher_st' && program() == 'ST')))
+            || isAdmin()
+          )
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ===================================================
+    // ranking_rules/{ruleId}
+    // ===================================================
+    match /ranking_rules/{ruleId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===================================================
+    // audit_logs/{logId}
+    // ===================================================
+    // Immutable — chỉ ghi, không sửa/xóa
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // ===================================================
+    // notifications/{notificationId}
+    // ===================================================
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+                    && onlyChangedKeys(['read']);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // ===================================================
+    // system_settings/{docId}
+    // ===================================================
+    match /system_settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===================================================
+    // Default deny
+    // ===================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

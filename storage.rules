@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// =====================================================
+// Firebase Storage Rules
+// =====================================================
+// Dùng cho: avatar nhân viên, file đính kèm bằng chứng KPI, export báo cáo
+// Tất cả file lưu trong: storage/{userId}/{filename}
+// =====================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+             ? firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+             : '';
+    }
+
+    function isAdmin() { return isSignedIn() && userRole() == 'ADMIN'; }
+    function isStaff() {
+      return isSignedIn() && userRole() in ['ADMIN','BOARD','OPERATION_MANAGER','PROGRAM_MANAGER'];
+    }
+
+    // File của user: avatar, hồ sơ cá nhân
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // File bằng chứng KPI: chỉ chủ sở hữu record + staff được đọc/ghi
+    match /kpi-evidence/{recordId}/{allPaths=**} {
+      allow read: if isStaff();
+      // Chỉ Admin/Board/PM/OP mới upload được evidence
+      allow write: if isStaff() && request.resource.size < 5 * 1024 * 1024; // 5MB
+    }
+
+    // Export báo cáo — chỉ Admin
+    match /reports/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if false; // chỉ Cloud Functions ghi
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
