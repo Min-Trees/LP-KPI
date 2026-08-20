@@ -5,10 +5,8 @@ import {
   ChevronRight,
   Plus,
   Minus,
-  Check,
   Calendar,
   Clock,
-  User,
 } from "lucide-react";
 import type { KpiTemplate, KpiRecord } from "@/types";
 import { formatDateTime } from "@/utils";
@@ -50,7 +48,10 @@ export function KpiHistoryModal({ template, records, open, onClose }: Props) {
     if (!acc[event.date]) {
       acc[event.date] = { day: event.date, month: 0, year: 0, events: [], criterionName: event.criterionName };
     }
-    acc[event.date].events.push(event);
+    const dayGroup = acc[event.date];
+    if (dayGroup) {
+      dayGroup.events.push(event);
+    }
     return acc;
   }, {});
 

@@ -187,7 +187,7 @@ export function KpiScoringModal({
     ]);
 
     let stt = 1;
-    template.criteria.forEach((criterion, ci) => {
+    template.criteria.forEach((criterion) => {
       const critEvents = events.filter((e) =>
         criterion.rules.some((r) => r.code === e.ruleCode),
       );

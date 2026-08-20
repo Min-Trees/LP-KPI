@@ -1,4 +1,4 @@
-import { PROGRAMS } from "@/constants/programs";
+import { ALL_PROGRAMS } from "@/constants/programs";
 import type { Program } from "@/constants/programs";
 
 interface ProgramSelectorProps {
@@ -21,7 +21,7 @@ export function ProgramSelector({
       className={`input ${className}`}
     >
       <option value="">{placeholder}</option>
-      {PROGRAMS.map((p) => (
+      {ALL_PROGRAMS.map((p) => (
         <option key={p.value} value={p.value}>
           {p.label}
         </option>

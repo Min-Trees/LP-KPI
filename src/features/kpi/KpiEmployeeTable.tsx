@@ -1,10 +1,4 @@
-import { Link } from "react-router-dom";
 import {
-  ChevronRight,
-  CheckCircle2,
-  Clock,
-  Lock,
-  AlertCircle,
   FileEdit,
   Eye,
   ThumbsUp,
@@ -32,8 +26,6 @@ export function KpiEmployeeTable({
   onApprove,
   readOnly,
 }: Props) {
-  const now = new Date();
-
   return (
     <div className="card overflow-hidden p-0">
       <div className="overflow-x-auto">
@@ -69,7 +61,6 @@ export function KpiEmployeeTable({
 
                 const status = rec?.status ?? "DRAFT";
                 const isLocked = status === "APPROVED" || status === "LOCKED";
-                const isSubmitted = status === "SUBMITTED";
                 const isInProgress = status === "IN_PROGRESS";
 
                 return (

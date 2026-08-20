@@ -31,7 +31,7 @@ export function useUnreadCount(userId: string | undefined) {
 export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, userId }: { id: string; userId: string }) => {
+    mutationFn: async ({ id }: { id: string; userId: string }) => {
       const doc = await getDocument<AppNotification>("notifications", id);
       if (doc) {
         await setDocument("notifications", id, { ...doc, read: true });

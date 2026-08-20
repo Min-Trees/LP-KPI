@@ -64,7 +64,7 @@ export function KpiScoringPanel({
   const today = new Date().getDate();
 
   function applyRule(
-    criterionId: string,
+    _criterionId: string,
     ruleCode: string,
     points: number,
     type: "ADD" | "SUBTRACT",

@@ -3,7 +3,6 @@ import {
   X,
   ThumbsUp,
   ThumbsDown,
-  Check,
   FileText,
   Clock,
 } from "lucide-react";

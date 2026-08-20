@@ -159,7 +159,7 @@ export default function DashboardPage() {
               { to: "/admin/employees", label: "Quản lý nhân sự", icon: Users, roles: [ROLE.ADMIN] },
               { to: "/admin/kpi-templates", label: "Mẫu KPI", icon: Settings, roles: [ROLE.ADMIN] },
             ].map(({ to, label, icon: Icon, roles }) => {
-              if (!roles.includes(appUser?.role as Role)) return null;
+              if (!appUser?.role || !roles.includes(appUser.role)) return null;
               return (
                 <Link
                   key={to}

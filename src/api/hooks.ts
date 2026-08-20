@@ -11,6 +11,7 @@ import type {
   KpiTemplate,
   KpiRecord,
   KpiPeriod,
+  KpiEvent,
   RankingRules,
   AuditLog,
 } from "@/types";
@@ -342,7 +343,7 @@ export function useSubmitKpiRecord() {
 export function useReopenKpiRecord() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ recordId, reopenedBy }: { recordId: string; reopenedBy: string }) => {
+    mutationFn: async ({ recordId }: { recordId: string; reopenedBy: string }) => {
       const doc = await getDocument<KpiRecord>("kpi_records", recordId);
       if (!doc) throw new Error("Record not found");
       const now = new Date().toISOString();
