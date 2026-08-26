@@ -5,6 +5,7 @@ import { RequireRole } from "@/features/auth/RequireRole";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import EmployeesPage from "@/pages/admin/EmployeesPage";
+import AccountsPage from "@/pages/admin/AccountsPage";
 import KpiTemplatesPage from "@/pages/admin/KpiTemplatesPage";
 import RankingRulesPage from "@/pages/admin/RankingRulesPage";
 import SystemSettingsPage from "@/pages/admin/SystemSettingsPage";
@@ -50,6 +51,14 @@ export default function App() {
         <Route path="/my-kpi" element={<PersonalKpiPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
 
+        <Route
+          path="/admin/accounts"
+          element={
+            <RequireRole allow={[ROLE.ADMIN]}>
+              <AccountsPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="/admin/employees"
           element={

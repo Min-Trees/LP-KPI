@@ -113,6 +113,10 @@ export default function DashboardPage() {
   }
 
   const isAdmin = appUser?.role === ROLE.ADMIN;
+  const isOpManager = appUser?.role === ROLE.OPERATION_MANAGER;
+  const isMgrHs = appUser?.role === ROLE.PROGRAM_MANAGER_HS;
+  const isMgrSt = appUser?.role === ROLE.PROGRAM_MANAGER_ST;
+  const isManager = isOpManager || isMgrHs || isMgrSt;
 
   return (
     <div className="space-y-5">
@@ -147,31 +151,47 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Quick Actions - Admin only */}
-      {isAdmin && (
+      {/* Quick Actions */}
+      {(isAdmin || isManager) && (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-slate-700">Thao tác nhanh</h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {[
-              { to: "/kpi/manager", label: "Chấm KPI BGH", icon: ClipboardList, roles: [ROLE.ADMIN, ROLE.BOARD] },
-              { to: "/kpi/office-support", label: "Chấm KPI VP", icon: ClipboardList, roles: [ROLE.ADMIN, ROLE.OPERATION_MANAGER] },
-              { to: "/kpi/teacher/HS", label: "Chấm KPI GV HS", icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER] },
-              { to: "/kpi/teacher/ST", label: "Chấm KPI GV ST", icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER] },
-              { to: "/admin/employees", label: "Quản lý nhân sự", icon: Users, roles: [ROLE.ADMIN] },
-              { to: "/admin/kpi-templates", label: "Mẫu KPI", icon: Settings, roles: [ROLE.ADMIN] },
-            ].map(({ to, label, icon: Icon, roles }) => {
-              if (!appUser?.role || !(roles as readonly string[]).includes(appUser.role)) return null;
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-                >
-                  <Icon size={15} className="shrink-0 text-slate-400" />
-                  {label}
+            {isAdmin && (
+              <Link to="/kpi/manager" className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                <ClipboardList size={15} className="shrink-0 text-slate-400" />
+                Chấm KPI BGH
+              </Link>
+            )}
+            {(isAdmin || isOpManager) && (
+              <Link to="/kpi/office-support" className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                <ClipboardList size={15} className="shrink-0 text-slate-400" />
+                KPI VP + Hỗ trợ
+              </Link>
+            )}
+            {(isAdmin || isMgrHs) && (
+              <Link to="/kpi/teacher/HS" className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                <ListChecks size={15} className="shrink-0 text-slate-400" />
+                KPI Giáo viên HS
+              </Link>
+            )}
+            {(isAdmin || isMgrSt) && (
+              <Link to="/kpi/teacher/ST" className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                <ListChecks size={15} className="shrink-0 text-slate-400" />
+                KPI Giáo viên ST
+              </Link>
+            )}
+            {isAdmin && (
+              <>
+                <Link to="/admin/employees" className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                  <Users size={15} className="shrink-0 text-slate-400" />
+                  Quản lý nhân sự
                 </Link>
-              );
-            })}
+                <Link to="/admin/kpi-templates" className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                  <Settings size={15} className="shrink-0 text-slate-400" />
+                  Mẫu KPI
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ export type EmployeeStatus = "ACTIVE" | "INACTIVE";
 
 export interface Employee {
   id: string;
+  uid?: string; // Firebase Auth UID — có uid = đã có tài khoản đăng nhập
   code: string;
   fullName: string;
   email: string;

@@ -50,12 +50,12 @@ const navGroups: NavGroup[] = [
     label: "KPI Chấm điểm",
     Icon: ClipboardList,
     defaultOpen: true,
-    roles: [ROLE.ADMIN, ROLE.BOARD, ROLE.OPERATION_MANAGER, ROLE.PROGRAM_MANAGER],
+    roles: [ROLE.ADMIN, ROLE.OPERATION_MANAGER, ROLE.PROGRAM_MANAGER_HS, ROLE.PROGRAM_MANAGER_ST],
     items: [
-      { to: "/kpi/manager", label: "Ban Giám Hiệu", Icon: ClipboardList, roles: [ROLE.ADMIN, ROLE.BOARD] },
+      { to: "/kpi/manager", label: "Ban Giám Hiệu", Icon: ClipboardList, roles: [ROLE.ADMIN] },
       { to: "/kpi/office-support", label: "Văn phòng + Hỗ trợ", Icon: ClipboardList, roles: [ROLE.ADMIN, ROLE.OPERATION_MANAGER] },
-      { to: "/kpi/teacher/HS", label: "Giáo viên HS", Icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER] },
-      { to: "/kpi/teacher/ST", label: "Giáo viên ST", Icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER] },
+      { to: "/kpi/teacher/HS", label: "Giáo viên HS", Icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER_HS] },
+      { to: "/kpi/teacher/ST", label: "Giáo viên ST", Icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER_ST] },
     ],
   },
   {
@@ -83,6 +83,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: false,
     roles: [ROLE.ADMIN],
     items: [
+      { to: "/admin/accounts", label: "Tài khoản", Icon: UserCircle, roles: [ROLE.ADMIN] },
       { to: "/admin/employees", label: "Nhân sự", Icon: Users, roles: [ROLE.ADMIN] },
       { to: "/admin/kpi-templates", label: "Mẫu KPI", Icon: FileSpreadsheet, roles: [ROLE.ADMIN] },
       { to: "/admin/ranking-rules", label: "Xếp loại & Thưởng", Icon: Award, roles: [ROLE.ADMIN] },
@@ -118,9 +119,7 @@ export function Sidebar({ role }: Props) {
     <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
       {/* Logo */}
       <div className="flex h-14 items-center gap-2 border-b border-slate-200 px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600">
-          <GaugeCircle size={18} className="text-white" />
-        </div>
+        <img src="/logo.png" alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
         <div>
           <span className="text-sm font-bold text-slate-900">KPI System</span>
           <p className="text-[10px] text-slate-400 leading-tight">Bang cham diem KPI</p>

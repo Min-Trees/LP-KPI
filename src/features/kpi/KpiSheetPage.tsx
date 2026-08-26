@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthProvider";
 import {
   useEmployees,
@@ -28,8 +29,22 @@ interface Props {
 }
 
 export function KpiSheetPage({ templateType, title, programFilter: _programFilter }: Props) {
+  const navigate = useNavigate();
   const { appUser } = useAuth();
   const userIsAdmin = isAdmin(appUser?.role);
+
+  // Role-based access guard
+  const roleAccess: Record<string, KpiTemplateType[]> = {
+    [ROLE.ADMIN]: ["manager", "office_support", "teacher_hs", "teacher_st"],
+    [ROLE.BOARD]: ["manager"],
+    [ROLE.OPERATION_MANAGER]: ["office_support"],
+    [ROLE.PROGRAM_MANAGER_HS]: ["teacher_hs"],
+    [ROLE.PROGRAM_MANAGER_ST]: ["teacher_st"],
+    [ROLE.EMPLOYEE]: [],
+  };
+  const allowedTemplates = roleAccess[appUser?.role ?? ""] ?? [];
+  const hasAccess = allowedTemplates.includes(templateType);
+
   const toast = useToast();
   const { data: template, isLoading: loadingTpl } = useKpiTemplateByType(templateType);
   const { data: employees = [], isLoading: loadingEmp } = useEmployees();
@@ -39,6 +54,12 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
   const approveRecord = useApproveKpiRecord();
   const rejectRecord = useRejectKpiRecord();
   const writeAuditLog = useWriteAuditLog();
+
+  // Redirect if role doesn't have access to this template type
+  if (!hasAccess) {
+    navigate("/dashboard", { replace: true });
+    return null;
+  }
 
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -61,15 +82,11 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
 
     // Filter by kpiType / department based on templateType
     if (templateType === "manager") {
-      // Ban Giám hiệu: BOARD, OPERATION_MANAGER, PROGRAM_MANAGER
-      list = list.filter((e) =>
-        e.role === "BOARD" ||
-        e.role === "OPERATION_MANAGER" ||
-        e.role === "PROGRAM_MANAGER"
-      );
+      // Khối Manager chấm cho nhân viên Văn phòng + H� trợ
+      list = list.filter((e) => e.department === "Văn phòng + Hỗ trợ");
     } else if (templateType === "office_support") {
       // Văn phòng + Hỗ trợ
-      list = list.filter((e) => e.department === "Văn Phòng");
+      list = list.filter((e) => e.department === "Văn phòng + Hỗ trợ");
     } else if (templateType === "teacher_hs") {
       // Giáo viên HS
       list = list.filter((e) => e.department === "Giáo viên HS");
@@ -102,11 +119,26 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
 
   if (!template) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-        <p className="text-sm font-medium text-amber-800">
-          Chưa có template KPI cho <b>{title}</b>. Admin vào{" "}
-          <b>Mẫu KPI</b> để tạo template trước.
-        </p>
+      <div className="space-y-3">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-medium text-amber-800">
+            Chưa có template KPI cho <b>{title}</b>. Admin vào{" "}
+            <b>Mẫu KPI</b> để tạo template trước.
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
+          <p className="font-semibold mb-2">Debug info (chỉ dev):</p>
+          <p>templateType: <b>{templateType}</b></p>
+          <p>Tổng nhân viên ACTIVE: <b>{employees.filter((e) => e.status === "ACTIVE").length}</b></p>
+          <p>Sau filter {templateType}: <b>{
+            employees.filter((e) => {
+              if (e.status !== "ACTIVE") return false;
+              if (templateType === "manager") return e.department === "Văn phòng + Hỗ trợ";
+              return false;
+            }).length
+          }</b></p>
+          <p>User role: <b>{appUser?.role}</b> | branch: <b>{appUser?.branch}</b></p>
+        </div>
       </div>
     );
   }

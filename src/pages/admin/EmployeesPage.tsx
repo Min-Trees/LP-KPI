@@ -8,7 +8,7 @@ import {
   useCreateEmployee,
   useUpdateEmployee,
 } from "@/api/hooks";
-import { ROLE_LABEL, ROLE, ALL_ROLES } from "@/constants/roles";
+import { ROLE_LABEL, ROLE, ALL_ROLES, MANAGER_ROLES } from "@/constants/roles";
 import { PROGRAM, PROGRAM_LABEL, ALL_PROGRAMS } from "@/constants/programs";
 import { BRANCHES } from "@/constants/branches";
 import type { Employee } from "@/types";
@@ -23,12 +23,12 @@ import { isAdmin } from "@/features/auth/AuthProvider";
 const schema = z.object({
   code: z.string().min(1, "Bắt buộc"),
   fullName: z.string().min(1, "Bắt buộc"),
-  email: z.string().email("Email không hợp lệ"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   phone: z.string().optional(),
   department: z.string().min(1, "Bắt buộc"),
   departmentType: z.string().optional(),
   position: z.string().optional(),
-  program: z.enum(["HS", "ST"]).optional(),
+  program: z.enum(["HS", "ST", ""]).optional(),
   branch: z.enum(["LAO_CAI", "LAI_THIEU"]),
   managerId: z.string().optional(),
   role: z.enum(ALL_ROLES as unknown as [Role, ...Role[]]),
@@ -53,6 +53,7 @@ export default function EmployeesPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors: formErrors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -64,7 +65,7 @@ export default function EmployeesPage() {
       department: "",
       departmentType: "",
       position: "",
-      program: PROGRAM.HS,
+      program: undefined,
       branch: "LAI_THIEU",
       managerId: "",
       role: ROLE.EMPLOYEE,
@@ -84,12 +85,12 @@ export default function EmployeesPage() {
     setEditing(emp);
     setValue("code", emp.code);
     setValue("fullName", emp.fullName);
-    setValue("email", emp.email);
+    setValue("email", emp.email ?? "");
     setValue("phone", emp.phone ?? "");
     setValue("department", emp.department);
     setValue("departmentType", emp.departmentType ?? "");
     setValue("position", emp.position ?? "");
-    setValue("program", (emp.program ?? PROGRAM.HS) as Program);
+    setValue("program", emp.program ?? undefined);
     setValue("branch", emp.branch);
     setValue("managerId", emp.managerId ?? "");
     setValue("role", emp.role);
@@ -100,12 +101,13 @@ export default function EmployeesPage() {
   async function onSubmit(values: FormValues) {
     const payload = {
       ...values,
-      phone: values.phone ?? undefined,
-      departmentType: values.departmentType ?? undefined,
-      position: values.position ?? undefined,
-      program: values.program,
+      phone: values.phone || undefined,
+      departmentType: values.departmentType || undefined,
+      position: values.position || undefined,
+      program: (values.program as string) || undefined,
       branch: values.branch,
       managerId: values.managerId || undefined,
+      email: values.email || undefined,
     } as Omit<Employee, "id" | "createdAt" | "updatedAt">;
 
     if (editing) {
@@ -253,7 +255,7 @@ export default function EmployeesPage() {
               </Field>
               <Field label="Cơ sở" error={formErrors.branch?.message}>
                 <BranchSelector
-                  value={editing?.branch ?? "LAI_THIEU"}
+                  value={editing?.branch ?? watch("branch")}
                   onChange={(v) => setValue("branch", v as Branch)}
                   className="w-full"
                 />
@@ -266,8 +268,15 @@ export default function EmployeesPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Manager (userId)">
-                <input className="input" {...register("managerId")} />
+              <Field label="Quản lý">
+                <select className="input" {...register("managerId")}>
+                  <option value="">-- Không có --</option>
+                  {data.filter((emp) => MANAGER_ROLES.includes(emp.role)).map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.fullName} ({emp.code})
+                    </option>
+                  ))}
+                </select>
               </Field>
               <Field label="Role" error={formErrors.role?.message}>
                 <select className="input" {...register("role")}>

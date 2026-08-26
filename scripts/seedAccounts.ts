@@ -41,30 +41,30 @@ const employees = [
   { code: "4001", name: "Huỳnh Thị Vân Trang",      role: "OPERATION_MANAGER", department: "Văn phòng + Hỗ trợ" },
   { code: "4002", name: "Ngô Thị Ánh Tuyết",        role: "OPERATION_MANAGER", department: "Văn phòng + Hỗ trợ" },
 
-  // ══ PROGRAM_MANAGER — HS ═══════════════════════════════
-  { code: "1006", name: "Lê Thị Thanh Mai",          role: "PROGRAM_MANAGER", department: "Giáo viên", program: "HS" },
-  { code: "1007", name: "Nguyễn Thị Thắm",          role: "PROGRAM_MANAGER", department: "Giáo viên", program: "HS" },
-  { code: "1008", name: "Nguyễn Thị Băng Tâm",     role: "PROGRAM_MANAGER", department: "Giáo viên", program: "HS" },
-  { code: "1009", name: "Nguyễn Kim Ngân",          role: "PROGRAM_MANAGER", department: "Giáo viên", program: "HS" },
-  { code: "1010", name: "Bế Thị Ngọc Diễm",         role: "PROGRAM_MANAGER", department: "Giáo viên", program: "HS" },
-  { code: "1011", name: "Lê Thị Ngọc Tuyết",        role: "PROGRAM_MANAGER", department: "Giáo viên", program: "HS" },
+  // ══ PROGRAM_MANAGER_HS ═══════════════════════════════
+  { code: "1006", name: "Lê Thị Thanh Mai",          role: "PROGRAM_MANAGER_HS", department: "Giáo viên", program: "HS" },
+  { code: "1007", name: "Nguyễn Thị Thắm",          role: "PROGRAM_MANAGER_HS", department: "Giáo viên", program: "HS" },
+  { code: "1008", name: "Nguyễn Thị Băng Tâm",     role: "PROGRAM_MANAGER_HS", department: "Giáo viên", program: "HS" },
+  { code: "1009", name: "Nguyễn Kim Ngân",          role: "PROGRAM_MANAGER_HS", department: "Giáo viên", program: "HS" },
+  { code: "1010", name: "Bế Thị Ngọc Diễm",         role: "PROGRAM_MANAGER_HS", department: "Giáo viên", program: "HS" },
+  { code: "1011", name: "Lê Thị Ngọc Tuyết",        role: "PROGRAM_MANAGER_HS", department: "Giáo viên", program: "HS" },
 
-  // ══ PROGRAM_MANAGER — ST ═══════════════════════════════
-  { code: "1012", name: "Nguyễn Thị Mai Hương",     role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1013", name: "Lê Thị Kim Nguyên",         role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1014", name: "Trần Thái Thiên Thảo",      role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1015", name: "Nguyễn Thị Thu Huyền",     role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1016", name: "Vương Thanh Hà Trang",    role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1017", name: "Trần Thị Thanh Trúc",      role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1018", name: "Phạm Huỳnh Anh Thư",      role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1019", name: "Thạch Thảo",               role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1020", name: "Nguyễn Thị Hồng Thi",      role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1021", name: "Võ Lê Thị Huyền Trang",    role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
-  { code: "1022", name: "Danh Thị Thùy Trang",       role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST" },
+  // ══ PROGRAM_MANAGER_ST ═══════════════════════════════
+  { code: "1012", name: "Nguyễn Thị Mai Hương",     role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1013", name: "Lê Thị Kim Nguyên",         role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1014", name: "Trần Thái Thiên Thảo",      role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1015", name: "Nguyễn Thị Thu Huyền",     role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1016", name: "Vương Thanh Hà Trang",    role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1017", name: "Trần Thị Thanh Trúc",      role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1018", name: "Phạm Huỳnh Anh Thư",      role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1019", name: "Thạch Thảo",               role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1020", name: "Nguyễn Thị Hồng Thi",      role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1021", name: "Võ Lê Thị Huyền Trang",    role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
+  { code: "1022", name: "Danh Thị Thùy Trang",       role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST" },
   // Thử việc
-  { code: "1027", name: "Nguyễn Thị Thuỳ Trang",   role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST", departmentType: "Thử việc" },
-  { code: "1028", name: "Hà Thị Kim Ngân",           role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST", departmentType: "Thử việc" },
-  { code: "1030", name: "Nguyễn Bùi Tường Vy",     role: "PROGRAM_MANAGER", department: "Giáo viên", program: "ST", departmentType: "Thử việc" },
+  { code: "1027", name: "Nguyễn Thị Thuỳ Trang",   role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST", departmentType: "Thử việc" },
+  { code: "1028", name: "Hà Thị Kim Ngân",           role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST", departmentType: "Thử việc" },
+  { code: "1030", name: "Nguyễn Bùi Tường Vy",     role: "PROGRAM_MANAGER_ST", department: "Giáo viên", program: "ST", departmentType: "Thử việc" },
 ];
 
 // ──────────────────────────────────────────────────────────────
