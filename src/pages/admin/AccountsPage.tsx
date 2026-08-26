@@ -7,7 +7,7 @@ import {
 import { createFirestoreAccount } from "@/api/accounts";
 import { ROLE_LABEL, ALL_ROLES } from "@/constants/roles";
 import { BRANCHES } from "@/constants/branches";
-import { PROGRAM_LABEL, ALL_PROGRAMS } from "@/constants/programs";
+import { ALL_PROGRAMS } from "@/constants/programs";
 import type { Role } from "@/constants/roles";
 import type { Branch } from "@/types/branch";
 import type { Program } from "@/constants/programs";

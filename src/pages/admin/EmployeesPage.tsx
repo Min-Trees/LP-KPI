@@ -9,11 +9,10 @@ import {
   useUpdateEmployee,
 } from "@/api/hooks";
 import { ROLE_LABEL, ROLE, ALL_ROLES, MANAGER_ROLES } from "@/constants/roles";
-import { PROGRAM, PROGRAM_LABEL, ALL_PROGRAMS } from "@/constants/programs";
+import { PROGRAM_LABEL, ALL_PROGRAMS } from "@/constants/programs";
 import { BRANCHES } from "@/constants/branches";
 import type { Employee } from "@/types";
 import type { Role } from "@/constants/roles";
-import type { Program } from "@/constants/programs";
 import type { Branch } from "@/types/branch";
 import { formatDate } from "@/utils";
 import { useAuth } from "@/features/auth/AuthProvider";
