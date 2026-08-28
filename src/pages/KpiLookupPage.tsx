@@ -12,7 +12,6 @@ import {
   query,
   where,
   orderBy,
-  limit,
 } from "firebase/firestore";
 import type { Employee, KpiPeriod, KpiRecord, KpiTemplate } from "@/types";
 import { RANK_LABEL, STATUS_LABEL } from "@/utils/labels";
@@ -93,16 +92,23 @@ export default function KpiLookupPage() {
         );
         snap = await getDocs(q);
       } else {
-        const term = name.trim();
-        const end = term + "\uf8ff";
-        const q = query(
-          collection(db, "employees"),
-          where("fullName", ">=", term),
-          where("fullName", "<=", end),
-          orderBy("fullName"),
-          limit(10),
-        );
-        snap = await getDocs(q);
+        // Load all employees and filter client-side for substring search
+        const allSnap = await getDocs(collection(db, "employees"));
+        snap = allSnap; // reuse for iteration below
+        const term = name.trim().toLowerCase();
+        const list: Array<Employee & { id: string }> = [];
+        allSnap.forEach((d) => {
+          const emp = d.data() as Employee;
+          if (emp.fullName?.toLowerCase().includes(term)) {
+            list.push({ ...emp, id: d.id });
+          }
+        });
+        setSearchResults(list);
+        if (list.length === 0) {
+          setSearchError(`Không tìm thấy nhân viên với tên "${name}".`);
+        }
+        setIsSearching(false);
+        return;
       }
       const list: Array<Employee & { id: string }> = [];
       snap.forEach((d) => list.push({ ...(d.data() as Employee), id: d.id }));
