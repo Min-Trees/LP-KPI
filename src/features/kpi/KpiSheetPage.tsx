@@ -18,9 +18,12 @@ import { KpiApprovalModal } from "./KpiApprovalModal";
 import { createNotification } from "@/api/notifications";
 import type { Employee, KpiEvent, KpiRecord, KpiRecordStatus, KpiTemplateType } from "@/types";
 import { generateId } from "@/utils";
-import { ROLE } from "@/constants/roles";
+import { ROLE, MANAGER_ROLES } from "@/constants/roles";
 import { isAdmin } from "@/features/auth/AuthProvider";
 import { useToast } from "@/hooks/useToast";
+import { BranchSelector } from "@/components/common/BranchSelector";
+import { Search } from "lucide-react";
+import type { Branch } from "@/types/branch";
 
 interface Props {
   templateType: KpiTemplateType;
@@ -67,41 +70,75 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
   const [approvalRecord, setApprovalRecord] = useState<KpiRecord | null>(null);
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
 
+  // Admin filter states
+  const [filterBranch, setFilterBranch] = useState<Branch | "">("");
+  const [filterSearch, setFilterSearch] = useState("");
+
   const canApprove = appUser?.role === ROLE.ADMIN || appUser?.role === ROLE.BOARD;
 
   const openPeriod = useMemo(
     () => periods.find((p) => p.status === "OPEN") ?? periods[0],
     [periods],
   );
-  const { data: records = [] } = useKpiRecords(openPeriod?.id, {
-    branch: (!userIsAdmin && appUser?.role !== ROLE.BOARD) ? appUser?.branch : undefined,
-  });
+
+  // Ổn định filter object để query key không bị thay đổi mỗi render
+  const recordsFilter = useMemo(
+    () => ({
+      branch: (!userIsAdmin && appUser?.role !== ROLE.BOARD) ? appUser?.branch : undefined,
+    }),
+    [userIsAdmin, appUser?.role, appUser?.branch],
+  );
+
+  const { data: records = [] } = useKpiRecords(openPeriod?.id, recordsFilter);
 
   const filteredEmployees = useMemo(() => {
     let list = employees.filter((e) => e.status === "ACTIVE");
 
-    // Filter by kpiType / department based on templateType
+    // 1. QUAN TRỌNG: Nếu là quản lý (không phải Admin/Board), chỉ thấy nhân sự thuộc cơ sở của mình
+    if (userIsAdmin || appUser?.role === "BOARD") {
+      // Admin/Board thấy tất cả → không lọc thêm ở bước này
+      // Nhưng áp dụng bộ lọc của Admin
+      if (filterBranch) {
+        list = list.filter((e) => e.branch === filterBranch);
+      }
+      if (filterSearch) {
+        const s = filterSearch.toLowerCase();
+        list = list.filter(
+          (e) =>
+            e.fullName.toLowerCase().includes(s) ||
+            e.code.toLowerCase().includes(s) ||
+            (e.email?.toLowerCase().includes(s) ?? false)
+        );
+      }
+    } else if (appUser?.branch) {
+      // Quản lý cơ sở (OPERATION_MANAGER): thấy TẤT CẢ nhân viên trong cơ sở của mình
+      // (đã lọc theo templateType ở bước tiếp theo)
+      if (appUser.role === ROLE.OPERATION_MANAGER) {
+        list = list.filter((e) => e.branch === appUser.branch);
+      } else if (appUser?.employeeId) {
+        // Quản lý chương trình: chỉ thấy nhân sự có managerId === appUser.employeeId
+        list = list.filter(
+          (e) => e.managerId === appUser.employeeId && e.branch === appUser.branch
+        );
+      }
+    }
+
+    // 2. Filter by kpiType / department based on templateType
     if (templateType === "manager") {
-      // Khối Manager chấm cho nhân viên Văn phòng + H� trợ
-      list = list.filter((e) => e.department === "Văn phòng + Hỗ trợ");
+      list = list.filter((e) => MANAGER_ROLES.includes(e.role));
     } else if (templateType === "office_support") {
-      // Văn phòng + Hỗ trợ
       list = list.filter((e) => e.department === "Văn phòng + Hỗ trợ");
     } else if (templateType === "teacher_hs") {
-      // Giáo viên HS
       list = list.filter((e) => e.department === "Giáo viên HS");
     } else if (templateType === "teacher_st") {
-      // Giáo viên ST
       list = list.filter((e) => e.department === "Giáo viên ST");
     }
 
-    // Filter by branch for non-admin/non-board users
-    if (!userIsAdmin && appUser?.role !== "BOARD" && appUser?.branch) {
-      list = list.filter((e) => e.branch === appUser.branch);
-    }
+    // 3. Loại trừ tài khoản đang đăng nhập (tránh tự chấm)
+    list = list.filter((e) => e.uid !== appUser?.uid);
 
     return list;
-  }, [employees, templateType, appUser, userIsAdmin]);
+  }, [employees, templateType, appUser, userIsAdmin, appUser?.uid, appUser?.employeeId, appUser?.branch, filterBranch, filterSearch]);
 
   const currentRecord = selectedEmployee
     ? records.find(
@@ -133,7 +170,7 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
           <p>Sau filter {templateType}: <b>{
             employees.filter((e) => {
               if (e.status !== "ACTIVE") return false;
-              if (templateType === "manager") return e.department === "Văn phòng + Hỗ trợ";
+              if (templateType === "manager") return MANAGER_ROLES.includes(e.role);
               return false;
             }).length
           }</b></p>
@@ -185,10 +222,8 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
         dailyScores[ev.date] = (dailyScores[ev.date] ?? 0) + ev.points;
       }
       const sum = Object.values(dailyScores).reduce((a, b) => a + b, 0);
-      const total = Math.max(
-        0,
-        Math.min(template.maxScorePerCriterion, 100 + sum),
-      );
+      // Không cap tối đa — cho phép vượt 110 để đạt xuất sắc
+      const total = Math.max(0, 100 + sum);
       return {
         criterionId: criterion.id,
         code: criterion.code,
@@ -232,6 +267,8 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
     if (currentRecord?.note) rec.note = currentRecord.note;
 
     await upsert.mutateAsync(rec);
+    // Realtime subscription (onSnapshot) sẽ tự động cập nhật UI khi dữ liệu thay đổi,
+    // bao gồm cả khi admin hoặc user khác đang mở cùng trang này.
 
     // Audit log
     writeAuditLog.mutate({
@@ -338,6 +375,9 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
 
   const isPeriodLocked = openPeriod?.status === "LOCKED" || openPeriod?.status === "CLOSED";
 
+  // Admin filter bar
+  const showAdminFilters = userIsAdmin || appUser?.role === "BOARD";
+
   return (
     <div className="space-y-4">
       {/* Page Header */}
@@ -356,6 +396,27 @@ export function KpiSheetPage({ templateType, title, programFilter: _programFilte
           </div>
         )}
       </div>
+
+      {/* Admin Filters */}
+      {showAdminFilters && (
+        <div className="card">
+          <div className="flex flex-wrap items-center gap-3">
+            <Search size={16} className="text-slate-400" />
+            <input
+              className="input max-w-sm"
+              placeholder="Tìm theo tên, mã NV, email..."
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+            />
+            <BranchSelector
+              value={filterBranch}
+              onChange={setFilterBranch}
+              placeholder="Tất cả cơ sở"
+              className="w-40"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Period Status */}
       {openPeriod && (

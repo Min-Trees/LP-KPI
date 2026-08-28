@@ -2,7 +2,8 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { ChevronRight } from "lucide-react";
+import { usePermissions } from "@/features/auth/usePermissions";
+import { ChevronRight, AlertCircle } from "lucide-react";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Tổng quan",
@@ -35,15 +36,46 @@ const PAGE_GROUPS: Record<string, string> = {
 };
 
 export function AppLayout() {
-  const { appUser } = useAuth();
+  const { appUser, firebaseUser, loading, signOut } = useAuth();
+  const { has } = usePermissions();
   const { pathname } = useLocation();
 
   const title = PAGE_TITLES[pathname] ?? "KPI System";
   const group = PAGE_GROUPS[pathname] ?? "";
 
+  // User đã đăng nhập Firebase nhưng KHÔNG có doc users/{uid} (auth user mồ côi).
+  // Hiển thị thông báo rõ ràng thay vì trắng giao diện.
+  if (!loading && firebaseUser && !appUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50 p-4">
+        <div className="card max-w-md text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+            <AlertCircle size={24} className="text-amber-600" />
+          </div>
+          <h2 className="text-lg font-semibold text-slate-800">
+            Tài khoản chưa được kích hoạt
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Tài khoản <strong>{firebaseUser.email}</strong> đã đăng nhập Firebase
+            thành công nhưng chưa có hồ sơ trong hệ thống.
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Vui lòng liên hệ Admin để được cấp quyền, hoặc dùng email khác.
+          </p>
+          <button
+            className="btn-primary mt-4 w-full"
+            onClick={() => void signOut()}
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-full bg-slate-50">
-      <Sidebar role={appUser?.role} />
+      <Sidebar role={appUser?.role} hasPermission={has} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         {/* Page header bar */}

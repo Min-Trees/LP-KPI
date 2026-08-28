@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { RequireAuth } from "@/features/auth/RequireAuth";
 import { RequireRole } from "@/features/auth/RequireRole";
+import { RequirePermission } from "@/features/auth/RequirePermission";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import EmployeesPage from "@/pages/admin/EmployeesPage";
@@ -18,6 +19,7 @@ import PersonalKpiPage from "@/pages/PersonalKpiPage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { ROLE } from "@/constants/roles";
+import { PERMISSIONS } from "@/constants/permissions";
 import KpiLookupPage from "@/pages/KpiLookupPage";
 import ApproveKpiPage from "@/pages/ApproveKpiPage";
 
@@ -70,33 +72,33 @@ export default function App() {
         <Route
           path="/admin/kpi-templates"
           element={
-            <RequireRole allow={[ROLE.ADMIN]}>
+            <RequirePermission permission={PERMISSIONS.ADMIN_KPI_TEMPLATES}>
               <KpiTemplatesPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/ranking-rules"
           element={
-            <RequireRole allow={[ROLE.ADMIN]}>
+            <RequirePermission permission={PERMISSIONS.ADMIN_RANKING_RULES}>
               <RankingRulesPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/system-settings"
           element={
-            <RequireRole allow={[ROLE.ADMIN]}>
+            <RequirePermission permission={PERMISSIONS.ADMIN_SYSTEM_SETTINGS}>
               <SystemSettingsPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/audit-logs"
           element={
-            <RequireRole allow={[ROLE.ADMIN]}>
+            <RequirePermission permission={PERMISSIONS.ADMIN_AUDIT_LOGS}>
               <AuditLogsPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
       </Route>

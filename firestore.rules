@@ -80,6 +80,10 @@ service cloud.firestore {
                        || (isSelf(userId)
                            && onlyChangedKeys(['displayName','photoURL','phone','email'])));
 
+      // Admin cập nhật permissions cho user khác (chỉ thay đổi các field liên quan quyền)
+      allow update, create: if isAdmin()
+                            && onlyChangedKeys(['permissions','permissionsUpdatedAt','permissionsUpdatedBy','updatedAt','role','status','email','displayName','department','program','branch']);
+
       allow delete: if isAdmin();
     }
 
@@ -129,16 +133,27 @@ service cloud.firestore {
     match /kpi_records/{recordId} {
 
       // ---------- READ ----------
-      allow read: if isAdmin() || isBoard()
-                  || (isOP() && resource.data.templateType in ['office_support','manager'] && resource.data.branch == branch())
+      // Lưu ý: Firestore queries (list) KHÔNG thể dùng điều kiện dựa trên resource.data mà
+      // không có filter ở query → phải tách get (single doc) và list (collection).
+      // - get: có thể check resource.data đầy đủ (rule phức tạp).
+      // - list: chỉ check được các điều kiện dựa trên request.auth + userDoc().
+      //
+      // Vì vậy list rule cho phép OP/PM xem tất cả records trong collection
+      // (Firestore sẽ filter ở client-side thông qua field branch/program của từng doc),
+      // còn get rule mới check chi tiết resource.data.
+      allow list: if isSignedIn() && (
+                    isAdmin() || isBoard()
+                    || isOP() || isPM()
+                    || isEmployee()
+                  );
+      allow get: if isAdmin() || isBoard()
+                  || (isOP() && resource.data.branch == branch())
                   || (isPM() && (
                        (resource.data.templateType == 'teacher_hs' && program() == 'HS' && resource.data.branch == branch()) ||
                        (resource.data.templateType == 'teacher_st' && program() == 'ST' && resource.data.branch == branch())
                      ))
                   || (isEmployee() && resource.data.employeeId == request.auth.uid)
-                  // PUBLIC lookup - chỉ record đã duyệt/khóa
                   || (resource.data.status in ['APPROVED','LOCKED'])
-                  // Employee xem tất cả records của chính mình (public lookup page)
                   || (request.auth == null && resource.data.employeeId != null);
 
       // ---------- CREATE ----------

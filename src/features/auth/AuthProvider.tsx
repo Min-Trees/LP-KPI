@@ -46,13 +46,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ref,
       (snap) => {
         if (snap.exists()) {
-          setAppUser({ uid: firebaseUser.uid, ...(snap.data() as Omit<AppUser, "uid">) });
+          const data = snap.data();
+          // Debug: nếu thiếu field quan trọng, log ra console
+          if (!data.role || !data.branch) {
+            console.warn(
+              "[AuthProvider] User doc thiếu field quan trọng:",
+              { uid: firebaseUser.uid, email: firebaseUser.email, data },
+            );
+          }
+          setAppUser({ uid: firebaseUser.uid, ...(data as Omit<AppUser, "uid">) });
         } else {
+          console.warn(
+            "[AuthProvider] User đã đăng nhập nhưng KHÔNG có doc users/{uid}:",
+            { uid: firebaseUser.uid, email: firebaseUser.email },
+          );
           setAppUser(null);
         }
         setLoading(false);
       },
-      () => {
+      (err) => {
+        console.error("[AuthProvider] Lỗi khi đọc users/{uid}:", err.code, err.message);
         setAppUser(null);
         setLoading(false);
       },
@@ -88,4 +101,8 @@ export function useAuth(): AuthContextValue {
 
 export function isAdmin(role?: string | null): boolean {
   return role === ROLE.ADMIN;
+}
+
+export function isBranchManager(role?: string | null): boolean {
+  return role === ROLE.OPERATION_MANAGER;
 }

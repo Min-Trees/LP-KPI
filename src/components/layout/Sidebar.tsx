@@ -18,14 +18,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
-import type { Role } from "@/constants/roles";
-import { ROLE } from "@/constants/roles";
+import { PERMISSIONS, type Permission } from "@/constants/permissions";
 
 interface NavItem {
   to: string;
   label: string;
   Icon: LucideIcon;
-  roles?: Role[];
+  /** Permission bắt buộc để hiển thị mục này. */
+  permission?: Permission;
 }
 
 interface NavGroup {
@@ -33,7 +33,6 @@ interface NavGroup {
   label: string;
   Icon: LucideIcon;
   items: NavItem[];
-  roles?: Role[];
   defaultOpen?: boolean;
 }
 
@@ -43,19 +42,45 @@ const navGroups: NavGroup[] = [
     label: "Tổng quan",
     Icon: LayoutDashboard,
     defaultOpen: true,
-    items: [{ to: "/dashboard", label: "Dashboard", Icon: LayoutDashboard }],
+    items: [
+      {
+        to: "/dashboard",
+        label: "Dashboard",
+        Icon: LayoutDashboard,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
+      },
+    ],
   },
   {
     id: "kpi",
     label: "KPI Chấm điểm",
     Icon: ClipboardList,
     defaultOpen: true,
-    roles: [ROLE.ADMIN, ROLE.OPERATION_MANAGER, ROLE.PROGRAM_MANAGER_HS, ROLE.PROGRAM_MANAGER_ST],
     items: [
-      { to: "/kpi/manager", label: "Ban Giám Hiệu", Icon: ClipboardList, roles: [ROLE.ADMIN] },
-      { to: "/kpi/office-support", label: "Văn phòng + Hỗ trợ", Icon: ClipboardList, roles: [ROLE.ADMIN, ROLE.OPERATION_MANAGER] },
-      { to: "/kpi/teacher/HS", label: "Giáo viên HS", Icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER_HS] },
-      { to: "/kpi/teacher/ST", label: "Giáo viên ST", Icon: ListChecks, roles: [ROLE.ADMIN, ROLE.PROGRAM_MANAGER_ST] },
+      {
+        to: "/kpi/manager",
+        label: "Ban Giám Hiệu",
+        Icon: ClipboardList,
+        permission: PERMISSIONS.KPI_SCORING_MANAGER,
+      },
+      {
+        to: "/kpi/office-support",
+        label: "Văn phòng + Hỗ trợ",
+        Icon: ClipboardList,
+        permission: PERMISSIONS.KPI_SCORING_OFFICE_SUPPORT,
+      },
+      {
+        to: "/kpi/teacher/HS",
+        label: "Giáo viên HS",
+        Icon: ListChecks,
+        permission: PERMISSIONS.KPI_SCORING_TEACHER_HS,
+      },
+      {
+        to: "/kpi/teacher/ST",
+        label: "Giáo viên ST",
+        Icon: ListChecks,
+        permission: PERMISSIONS.KPI_SCORING_TEACHER_ST,
+      },
     ],
   },
   {
@@ -64,9 +89,23 @@ const navGroups: NavGroup[] = [
     Icon: UserCircle,
     defaultOpen: true,
     items: [
-      { to: "/my-kpi", label: "KPI Cá nhân", Icon: GaugeCircle },
-      { to: "/approve-kpi", label: "Duyệt KPI", Icon: CheckCircle, roles: [ROLE.ADMIN, ROLE.BOARD] },
-      { to: "/notifications", label: "Thông báo", Icon: Bell },
+      {
+        to: "/my-kpi",
+        label: "KPI Cá nhân",
+        Icon: GaugeCircle,
+        permission: PERMISSIONS.KPI_PERSONAL_VIEW,
+      },
+      {
+        to: "/approve-kpi",
+        label: "Duyệt KPI",
+        Icon: CheckCircle,
+        permission: PERMISSIONS.KPI_APPROVE,
+      },
+      {
+        to: "/notifications",
+        label: "Thông báo",
+        Icon: Bell,
+      },
     ],
   },
   {
@@ -74,27 +113,59 @@ const navGroups: NavGroup[] = [
     label: "Báo cáo",
     Icon: BarChart3,
     defaultOpen: true,
-    items: [{ to: "/reports", label: "Xem báo cáo", Icon: BarChart3 }],
+    items: [
+      { to: "/reports", label: "Xem báo cáo", Icon: BarChart3, permission: PERMISSIONS.REPORTS_VIEW },
+    ],
   },
   {
     id: "admin",
     label: "Quản trị",
     Icon: Settings,
     defaultOpen: false,
-    roles: [ROLE.ADMIN],
     items: [
-      { to: "/admin/accounts", label: "Tài khoản", Icon: UserCircle, roles: [ROLE.ADMIN] },
-      { to: "/admin/employees", label: "Nhân sự", Icon: Users, roles: [ROLE.ADMIN] },
-      { to: "/admin/kpi-templates", label: "Mẫu KPI", Icon: FileSpreadsheet, roles: [ROLE.ADMIN] },
-      { to: "/admin/ranking-rules", label: "Xếp loại & Thưởng", Icon: Award, roles: [ROLE.ADMIN] },
-      { to: "/admin/system-settings", label: "Cấu hình hệ thống", Icon: Settings, roles: [ROLE.ADMIN] },
-      { to: "/admin/audit-logs", label: "Nhật ký hoạt động", Icon: History, roles: [ROLE.ADMIN] },
+      {
+        to: "/admin/accounts",
+        label: "Tài khoản",
+        Icon: UserCircle,
+        permission: PERMISSIONS.ADMIN_ACCOUNTS,
+      },
+      {
+        to: "/admin/employees",
+        label: "Nhân sự",
+        Icon: Users,
+        permission: PERMISSIONS.ADMIN_EMPLOYEES,
+      },
+      {
+        to: "/admin/kpi-templates",
+        label: "Mẫu KPI",
+        Icon: FileSpreadsheet,
+        permission: PERMISSIONS.ADMIN_KPI_TEMPLATES,
+      },
+      {
+        to: "/admin/ranking-rules",
+        label: "Xếp loại & Thưởng",
+        Icon: Award,
+        permission: PERMISSIONS.ADMIN_RANKING_RULES,
+      },
+      {
+        to: "/admin/system-settings",
+        label: "Cấu hình hệ thống",
+        Icon: Settings,
+        permission: PERMISSIONS.ADMIN_SYSTEM_SETTINGS,
+      },
+      {
+        to: "/admin/audit-logs",
+        label: "Nhật ký hoạt động",
+        Icon: History,
+        permission: PERMISSIONS.ADMIN_AUDIT_LOGS,
+      },
     ],
   },
 ];
 
 interface Props {
   role?: string | null;
+  hasPermission: (perm: Permission) => boolean;
 }
 
 function isActivePath(to: string, location: { pathname: string }) {
@@ -102,7 +173,7 @@ function isActivePath(to: string, location: { pathname: string }) {
   return location.pathname.startsWith(to);
 }
 
-export function Sidebar({ role }: Props) {
+export function Sidebar({ hasPermission }: Props) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -129,9 +200,10 @@ export function Sidebar({ role }: Props) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-2">
         {navGroups.map((group) => {
-          const visibleItems = group.items.filter(
-            (i) => !i.roles || (role && i.roles.includes(role as Role)),
-          );
+          const visibleItems = group.items.filter((i) => {
+            if (!i.permission) return true;
+            return hasPermission(i.permission);
+          });
           if (visibleItems.length === 0) return null;
 
           const isGroupOpen = !collapsed.has(group.id);

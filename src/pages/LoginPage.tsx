@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { GaugeCircle, AlertCircle } from "lucide-react";
+import { GaugeCircle, AlertCircle, CheckCircle, Copy, Eye, EyeOff } from "lucide-react";
+
+interface CreatedAccountInfo {
+  email: string;
+  password: string;
+  uid: string;
+}
 
 export default function LoginPage() {
   const { firebaseUser, signIn, loading } = useAuth();
@@ -10,6 +16,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showCreatedBanner, setShowCreatedBanner] = useState<CreatedAccountInfo | null>(null);
+  const [showBannerPassword, setShowBannerPassword] = useState(false);
+
+  // Kiểm tra sessionStorage khi mount — có thể admin vừa tạo tài khoản xong
+  useEffect(() => {
+    const raw = sessionStorage.getItem("createdAccount");
+    if (raw) {
+      try {
+        setShowCreatedBanner(JSON.parse(raw) as CreatedAccountInfo);
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, []);
+
+  function handleDismissBanner() {
+    sessionStorage.removeItem("createdAccount");
+    setShowCreatedBanner(null);
+  }
 
   if (!loading && firebaseUser) {
     return <Navigate to="/dashboard" replace />;
@@ -34,6 +59,54 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 p-6">
       <div className="w-full max-w-md card">
+
+        {/* ── Banner: tài khoản vừa được tạo ── */}
+        {showCreatedBanner && (
+          <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <CheckCircle size={16} className="text-emerald-600" />
+              <span className="font-medium text-emerald-800">Tạo tài khoản thành công!</span>
+            </div>
+            <div className="mb-2 space-y-1 text-sm text-emerald-700">
+              <p><strong>Email:</strong> {showCreatedBanner.email}</p>
+              <p className="flex items-center gap-2">
+                <strong>Mật khẩu:</strong>
+                <code className="rounded bg-white px-1.5 py-0.5 text-xs font-mono">
+                  {showBannerPassword ? showCreatedBanner.password : "••••••••"}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => setShowBannerPassword((v) => !v)}
+                  className="text-emerald-600 hover:text-emerald-800"
+                >
+                  {showBannerPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `Email: ${showCreatedBanner.email}\nMật khẩu: ${showCreatedBanner.password}`,
+                  );
+                }}
+                className="flex-1 rounded border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+              >
+                <Copy size={12} className="inline mr-1" />
+                Sao chép
+              </button>
+              <button
+                type="button"
+                onClick={handleDismissBanner}
+                className="flex-1 rounded border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mb-6 flex items-center gap-2">
           <GaugeCircle size={26} className="text-brand-600" />
           <h1 className="text-xl font-semibold">Đăng nhập hệ thống KPI</h1>

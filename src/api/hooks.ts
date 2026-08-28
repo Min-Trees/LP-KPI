@@ -1,4 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import {
+  collection,
+  onSnapshot,
+  query as fsQuery,
+  where,
+  doc,
+  setDoc,
+  type QueryConstraint,
+} from "firebase/firestore";
 import {
   listCollection,
   getDocument,
@@ -6,6 +16,8 @@ import {
   updateDocument,
   deleteDocument,
 } from "@/api/firestore";
+import { getDb } from "@/config/firebaseInit";
+import { useAuth } from "@/features/auth/AuthProvider";
 import type {
   Employee,
   KpiTemplate,
@@ -14,10 +26,12 @@ import type {
   KpiEvent,
   RankingRules,
   AuditLog,
+  AppUser,
 } from "@/types";
+import type { Permission } from "@/constants/permissions";
 import type { Branch } from "@/types/branch";
 import type { Program } from "@/constants/programs";
-import type { Role } from "@/constants/roles";
+import { ROLE, type Role } from "@/constants/roles";
 import { generateId } from "@/utils";
 
 export interface EmployeeFilters {
@@ -49,13 +63,66 @@ export const QUERY_KEYS = {
   auditLogs: ["audit_logs"] as const,
 };
 
+/**
+ * Generic hook dùng Firestore onSnapshot() để lắng nghe thay đổi realtime.
+ * Trả về { data, isLoading } tương tự useQuery nhưng luôn sync với server.
+ */
+function useRealtimeCollection<T extends { id?: string }>(
+  collectionPath: string,
+  constraints: QueryConstraint[] = [],
+  deps: unknown[] = [],
+) {
+  const [data, setData] = useState<T[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+    const db = getDb();
+    const q = fsQuery(collection(db, collectionPath), ...constraints);
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list: T[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) } as T));
+        setData(list);
+        setIsLoading(false);
+      },
+      (err) => {
+        // Permission denied / index missing / network error...
+        // Log rõ để dễ debug khi OP/PM không thấy data mà lẽ ra phải thấy.
+        console.error(`[useRealtimeCollection] ${collectionPath} error:`, err.code, err.message);
+        setError(err);
+        setData([]);
+        setIsLoading(false);
+      },
+    );
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collectionPath, ...deps]);
+
+  return { data, isLoading, error };
+}
+
 export function useEmployees(filters?: EmployeeFilters) {
-  return useQuery({
-    queryKey: filters ? [...QUERY_KEYS.employees, filters] : QUERY_KEYS.employees,
-    queryFn: async () => {
-      const all = await listCollection<Employee>("employees");
-      if (!filters) return all;
-      return all.filter((e) => {
+  // Build constraints cho onSnapshot (Firestore sẽ tự filter server-side)
+  const constraints: QueryConstraint[] = [];
+  if (filters?.status) constraints.push(where("status", "==", filters.status));
+  if (filters?.branch) constraints.push(where("branch", "==", filters.branch));
+  if (filters?.program) constraints.push(where("program", "==", filters.program));
+  if (filters?.role) constraints.push(where("role", "==", filters.role));
+  if (filters?.managerId) constraints.push(where("managerId", "==", filters.managerId));
+
+  const { data: raw, isLoading } = useRealtimeCollection<Employee>(
+    "employees",
+    constraints,
+    [filters?.status, filters?.branch, filters?.program, filters?.role, filters?.managerId],
+  );
+
+  // Apply any remaining client-side filters
+  const data = !filters
+    ? raw
+    : raw.filter((e) => {
         if (filters.branch && e.branch !== filters.branch) return false;
         if (filters.program && e.program !== filters.program) return false;
         if (filters.role && e.role !== filters.role) return false;
@@ -63,8 +130,8 @@ export function useEmployees(filters?: EmployeeFilters) {
         if (filters.status && e.status !== filters.status) return false;
         return true;
       });
-    },
-  });
+
+  return { data, isLoading } as const;
 }
 
 export function useEmployee(id: string | undefined) {
@@ -72,6 +139,55 @@ export function useEmployee(id: string | undefined) {
     queryKey: id ? QUERY_KEYS.employee(id) : ["employees", "none"],
     queryFn: () => (id ? getDocument<Employee>("employees", id) : Promise.resolve(null)),
     enabled: !!id,
+  });
+}
+
+/** Đọc permissions đang gán cho 1 user. */
+export function useUserPermissions(uid: string | undefined) {
+  return useQuery({
+    queryKey: uid ? ["users", uid, "permissions"] : ["users", "none", "permissions"],
+    queryFn: async () => {
+      if (!uid) return null;
+      const user = await getDocument<AppUser>("users", uid);
+      return user ?? null;
+    },
+    enabled: !!uid,
+  });
+}
+
+/** Mutation: cập nhật permissions của 1 user. */
+export function useUpdateUserPermissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      uid,
+      permissions,
+      updatedBy,
+    }: {
+      uid: string;
+      permissions: Permission[];
+      updatedBy: string;
+    }) => {
+      const now = new Date().toISOString();
+      // Dùng setDoc merge thay vì updateDoc để:
+      // - Không fail khi doc users/{uid} chưa tồn tại
+      // - Chỉ merge các field permissions*, không đụng đến field khác
+      await setDoc(
+        doc(getDb(), "users", uid),
+        {
+          permissions,
+          permissionsUpdatedAt: now,
+          permissionsUpdatedBy: updatedBy,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+      return { uid, permissions };
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["users", vars.uid, "permissions"] });
+      qc.invalidateQueries({ queryKey: ["users", vars.uid] });
+    },
   });
 }
 
@@ -116,25 +232,14 @@ export function useDeleteEmployee() {
 }
 
 export function useKpiTemplates() {
-  return useQuery({
-    queryKey: QUERY_KEYS.templates,
-    queryFn: () => listCollection<KpiTemplate>("kpi_templates"),
-  });
+  const { data, isLoading } = useRealtimeCollection<KpiTemplate>("kpi_templates");
+  return { data, isLoading } as const;
 }
 
 export function useKpiTemplateByType(type: string | undefined) {
-  return useQuery({
-    queryKey: type ? QUERY_KEYS.templateByType(type) : ["kpi_templates", "type", "none"],
-    queryFn: async () => {
-      if (!type) return null;
-      const all = await listCollection<KpiTemplate>("kpi_templates");
-      const active = all.find(
-        (t) => t.type === type && t.status === "ACTIVE",
-      );
-      return active ?? null;
-    },
-    enabled: !!type,
-  });
+  const { data, isLoading } = useRealtimeCollection<KpiTemplate>("kpi_templates");
+  const active = type ? data.find((t) => t.type === type && t.status === "ACTIVE") ?? null : null;
+  return { data: active, isLoading } as const;
 }
 
 export function useCreateKpiTemplate() {
@@ -162,10 +267,8 @@ export function useUpdateKpiTemplate() {
 }
 
 export function useKpiPeriods() {
-  return useQuery({
-    queryKey: QUERY_KEYS.periods,
-    queryFn: () => listCollection<KpiPeriod>("kpi_periods"),
-  });
+  const { data, isLoading } = useRealtimeCollection<KpiPeriod>("kpi_periods");
+  return { data, isLoading } as const;
 }
 
 export function useCurrentPeriod() {
@@ -194,22 +297,33 @@ export function useCreatePeriod() {
 }
 
 export function useKpiRecords(periodId: string | undefined, filters?: KpiRecordFilters) {
-  return useQuery({
-    queryKey: periodId ? [...QUERY_KEYS.recordsByPeriod(periodId), filters ?? {}] : ["kpi_records", "none"],
-    queryFn: async () => {
-      if (!periodId) return [] as KpiRecord[];
-      const all = await listCollection<KpiRecord>("kpi_records");
-      let filtered = all.filter((r) => r.periodId === periodId);
-      if (filters) {
-        if (filters.branch) filtered = filtered.filter((r) => r.branch === filters.branch);
-        if (filters.program) filtered = filtered.filter((r) => r.templateType.startsWith(`teacher_${filters.program?.toLowerCase()}`));
-        if (filters.status) filtered = filtered.filter((r) => r.status === filters.status);
-        if (filters.templateType) filtered = filtered.filter((r) => r.templateType === filters.templateType);
-      }
-      return filtered;
+  // Realtime subscription - sẽ tự động cập nhật khi admin hoặc user khác thay đổi dữ liệu
+  const constraints: QueryConstraint[] = [];
+  if (periodId) constraints.push(where("periodId", "==", periodId));
+  if (filters?.branch) constraints.push(where("branch", "==", filters.branch));
+  if (filters?.status) constraints.push(where("status", "==", filters.status));
+  if (filters?.templateType) constraints.push(where("templateType", "==", filters.templateType));
+
+  const { data: raw, isLoading } = useRealtimeCollection<KpiRecord>(
+    "kpi_records",
+    constraints,
+    [periodId, filters?.branch, filters?.status, filters?.templateType],
+  );
+
+  // Lọc client-side cho program (vì templateType startsWith cần custom logic)
+  const data = filters?.program
+    ? raw.filter((r) => r.templateType.startsWith(`teacher_${filters.program?.toLowerCase()}`))
+    : raw;
+
+  return {
+    data,
+    isLoading,
+    refetch: () => {
+      // Với realtime hook, refetch không cần thiết vì onSnapshot tự cập nhật
+      // Nhưng giữ API để không phải sửa nơi khác
+      return Promise.resolve({ data });
     },
-    enabled: !!periodId,
-  });
+  } as const;
 }
 
 export function useUpsertKpiRecord() {
@@ -219,7 +333,12 @@ export function useUpsertKpiRecord() {
       await setDocument("kpi_records", record.id, record);
       return record;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.records }),
+    onSuccess: (data) => {
+      // Invalidate tất cả queries liên quan kpi_records để UI cập nhật ngay.
+      // Dùng prefix ["kpi_records"] + refetchType:"all" để chắc chắn mọi query
+      // (kể cả query có filter object) đều được refetch.
+      qc.invalidateQueries({ queryKey: ["kpi_records"], refetchType: "all" });
+    },
   });
 }
 
@@ -366,33 +485,44 @@ export function useReopenKpiRecord() {
 // ─── Employee KPIs ──────────────────────────────────────────────────────────
 
 export function useEmployeeKpiRecords(employeeId: string | undefined) {
-  return useQuery({
-    queryKey: ["kpi_records", "employee", employeeId] as const,
-    queryFn: async () => {
-      if (!employeeId) return [];
-      const all = await listCollection<KpiRecord>("kpi_records");
-      return all
-        .filter((r) => r.employeeId === employeeId)
-        .sort((a, b) => {
-          const aPeriod = a.periodId;
-          const bPeriod = b.periodId;
-          return aPeriod.localeCompare(bPeriod);
-        });
-    },
-    enabled: !!employeeId,
-  });
+  const constraints: QueryConstraint[] = [];
+  if (employeeId) constraints.push(where("employeeId", "==", employeeId));
+  const { data: raw, isLoading } = useRealtimeCollection<KpiRecord>(
+    "kpi_records",
+    constraints,
+    [employeeId],
+  );
+  const data = [...raw].sort((a, b) => a.periodId.localeCompare(b.periodId));
+  return { data, isLoading } as const;
 }
 
 // ─── All KPI Records (for approval) ────────────────────────────────────────
 
 export function useAllKpiRecords() {
-  return useQuery({
-    queryKey: ["kpi_records", "all"] as const,
-    queryFn: async () => {
-      const all = await listCollection<KpiRecord>("kpi_records");
-      return all;
-    },
-  });
+  const { appUser } = useAuth();
+  const { data: raw, isLoading, error } = useRealtimeCollection<KpiRecord>("kpi_records");
+
+  // Client-side filter theo role/branch để đảm bảo:
+  //  - OP chỉ thấy records thuộc branch của mình (phòng case Firestore rule không lọc)
+  //  - PM chỉ thấy records thuộc program+branch của mình
+  //  - Admin/Board thấy tất cả
+  const data = (() => {
+    if (!appUser) return raw;
+    const role = appUser.role;
+    if (role === ROLE.ADMIN || role === ROLE.BOARD) return raw;
+    if (role === ROLE.OPERATION_MANAGER) {
+      return raw.filter((r) => r.branch === appUser.branch);
+    }
+    if (role === ROLE.PROGRAM_MANAGER_HS || role === ROLE.PROGRAM_MANAGER_ST) {
+      const tt = role === ROLE.PROGRAM_MANAGER_HS ? "teacher_hs" : "teacher_st";
+      return raw.filter(
+        (r) => r.branch === appUser.branch && r.templateType === tt,
+      );
+    }
+    return raw.filter((r) => r.employeeId === appUser.uid);
+  })();
+
+  return { data, isLoading, error } as const;
 }
 
 // ─── Reports ────────────────────────────────────────────────────────────────

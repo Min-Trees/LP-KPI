@@ -54,6 +54,14 @@ export default function ApproveKpiPage() {
     [filteredRecords]
   );
 
+  const visibleRecords = useMemo(() => {
+    // Hiển thị cả records có status SUBMITTED + APPROVED/REJECTED để OP theo dõi
+    if (filterStatus !== "all") return filteredRecords;
+    return filteredRecords.filter((r) =>
+      ["SUBMITTED", "APPROVED", "REJECTED"].includes(r.status)
+    );
+  }, [filteredRecords, filterStatus]);
+
   const selectedRecord = filteredRecords.find((r) => r.id === selectedRecordId) ?? filteredRecords[0];
   const selectedPeriod = selectedRecord ? periodMap.get(selectedRecord.periodId) : null;
   const selectedEmployee = selectedRecord ? employeeMap.get(selectedRecord.employeeId) : null;
@@ -231,13 +239,23 @@ export default function ApproveKpiPage() {
         <div className="flex flex-1 flex-col min-w-0 rounded-xl border border-slate-200 bg-white">
           <div className="shrink-0 border-b border-slate-100 px-4 py-2">
             <p className="text-xs font-semibold text-slate-500">
-              Danh sách KPI ({filteredRecords.length})
+              Danh sách KPI ({visibleRecords.length})
             </p>
           </div>
           <div className="flex-1 overflow-auto">
-            {filteredRecords.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-slate-400">
-                <p className="text-sm">Không có KPI nào</p>
+            {visibleRecords.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                <p className="text-sm">Không có KPI nào để hiển thị</p>
+                {records.length > 0 && filteredRecords.length === 0 && (
+                  <p className="text-xs text-slate-500">
+                    Có {records.length} bản ghi nhưng không khớp bộ lọc hiện tại
+                  </p>
+                )}
+                {records.length === 0 && (
+                  <p className="text-xs text-slate-500">
+                    Bạn chưa có KPI nào được gửi duyệt. Vào trang Chấm KPI để gửi duyệt.
+                  </p>
+                )}
               </div>
             ) : (
               <table className="w-full text-sm">
@@ -268,7 +286,7 @@ export default function ApproveKpiPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filteredRecords.map((rec) => {
+                  {visibleRecords.map((rec) => {
                     const period = periodMap.get(rec.periodId);
                     const employee = employeeMap.get(rec.employeeId);
                     const isSelected = selectedRecord?.id === rec.id;

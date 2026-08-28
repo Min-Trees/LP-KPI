@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Search, CheckCircle, RefreshCw, UserCircle, X, Copy, Eye, EyeOff, Loader } from "lucide-react";
+import { Search, CheckCircle, RefreshCw, UserCircle, X, Copy, Eye, EyeOff, Loader, Trash2, Shield } from "lucide-react";
 import {
   useEmployees,
   useUpdateEmployee,
+  useUpdateUserPermissions,
 } from "@/api/hooks";
-import { createFirestoreAccount } from "@/api/accounts";
-import { ROLE_LABEL, ALL_ROLES } from "@/constants/roles";
+import { deleteAccountOnly, createEmployeeWithAccount } from "@/api/accounts";
+import { roleRequiresAccount } from "@/constants/roles";
+import { ROLE_LABEL, ALL_ROLES, ROLE } from "@/constants/roles";
 import { BRANCHES } from "@/constants/branches";
 import { ALL_PROGRAMS } from "@/constants/programs";
 import type { Role } from "@/constants/roles";
@@ -16,9 +18,10 @@ import { formatDate, slugify } from "@/utils";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { BranchSelector } from "@/components/common/BranchSelector";
 import { isAdmin } from "@/features/auth/AuthProvider";
+import { PermissionMatrix } from "@/components/admin/PermissionMatrix";
 
 export default function AccountsPage() {
-  const { appUser } = useAuth();
+  const { appUser, signOut } = useAuth();
   const { data: employees = [], isLoading, refetch } = useEmployees();
   const updateEmployee = useUpdateEmployee();
 
@@ -30,12 +33,18 @@ export default function AccountsPage() {
 
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newStatus, setNewStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
+  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [permissionEmployee, setPermissionEmployee] = useState<Employee | null>(null);
 
   const userIsAdmin = isAdmin(appUser?.role);
 
   const filtered = employees.filter((emp) => {
-    // Chỉ hiển thị nhân viên đã có tài khoản đăng nhập (id = Firebase Auth UID)
-    if (!emp.id) return false;
+    // Chỉ hiển thị nhân viên đã có tài khoản đăng nhập
+    // (employee có field `uid` liên kết với Firebase Auth UID).
+    if (!emp.id || !emp.uid) return false;
+    if (emp.role === 'EMPLOYEE') return false;
     if (search) {
       const s = search.toLowerCase();
       if (
@@ -64,6 +73,22 @@ export default function AccountsPage() {
       patch: { status: newStatus },
     });
     setEditingEmployee(null);
+  }
+
+  async function handleDeleteAccount(emp: Employee) {
+    if (!emp.id) return;
+    setDeletingId(emp.id);
+    setDeleteError(null);
+    try {
+      await deleteAccountOnly(emp.id);
+      await refetch();
+      setDeletingEmployee(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setDeleteError(message);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   if (isLoading) {
@@ -184,12 +209,32 @@ export default function AccountsPage() {
                   <td className="px-3 py-2 text-xs text-slate-500">{formatDate(emp.createdAt)}</td>
                   <td className="px-3 py-2">
                     {userIsAdmin && (
-                      <button
-                        className="btn-secondary text-xs px-2 py-1"
-                        onClick={() => openEdit(emp)}
-                      >
-                        Khóa/Mở
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="btn-secondary text-xs px-2 py-1"
+                          onClick={() => openEdit(emp)}
+                        >
+                          Khóa/Mở
+                        </button>
+                        <button
+                          className="btn-secondary text-xs px-2 py-1"
+                          onClick={() => setPermissionEmployee(emp)}
+                          title="Phân quyền chi tiết"
+                        >
+                          <Shield size={12} /> Phân quyền
+                        </button>
+                        <button
+                          className="btn-secondary text-xs px-2 py-1 text-rose-700 hover:bg-rose-50"
+                          onClick={() => {
+                            setDeletingEmployee(emp);
+                            setDeleteError(null);
+                          }}
+                          disabled={emp.id === appUser?.uid}
+                          title={emp.id === appUser?.uid ? "Không thể xóa chính bạn" : "Xóa tài khoản"}
+                        >
+                          <Trash2 size={12} /> Xóa
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -255,6 +300,149 @@ export default function AccountsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {deletingEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="card w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-semibold text-rose-700">Xóa tài khoản</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Bạn có chắc muốn xóa tài khoản của <strong>{deletingEmployee.fullName}</strong>?
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Email: <span className="font-mono">{deletingEmployee.email}</span>
+            </p>
+            <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              Hành động này sẽ xóa vĩnh viễn Firebase Auth account và toàn bộ dữ liệu liên quan (users/employees docs). Không thể hoàn tác.
+            </p>
+            {deleteError && (
+              <p className="mt-2 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-700">{deleteError}</p>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                className="flex-1 btn-secondary py-2"
+                onClick={() => {
+                  setDeletingEmployee(null);
+                  setDeleteError(null);
+                }}
+                disabled={deletingId === deletingEmployee.id}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="flex-1 btn-primary py-2 bg-rose-600 hover:bg-rose-700"
+                onClick={() => void handleDeleteAccount(deletingEmployee)}
+                disabled={deletingId === deletingEmployee.id}
+              >
+                {deletingId === deletingEmployee.id ? "Đang xóa..." : "Xóa vĩnh viễn"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Permission Matrix Modal ── */}
+      {permissionEmployee && (
+        <PermissionMatrixModal
+          employee={permissionEmployee}
+          currentAdminUid={appUser?.uid ?? ""}
+          onClose={() => setPermissionEmployee(null)}
+          onSaved={() => {
+            setPermissionEmployee(null);
+            void refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Permission Matrix Modal ────────────────────────────────────────────────
+
+function PermissionMatrixModal({
+  employee,
+  currentAdminUid,
+  onClose,
+  onSaved,
+}: {
+  employee: Employee;
+  currentAdminUid: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const updatePermissions = useUpdateUserPermissions();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isAdminUser = employee.role === ROLE.ADMIN;
+
+  function handleSave(permissions: Parameters<typeof updatePermissions.mutateAsync>[0]["permissions"]) {
+    // QUAN TRỌNG: doc users/{uid} dùng Firebase Auth UID (không phải employee.id)
+    // - Với createEmployeeWithAccount: employee.id === authUid → trùng → OK
+    // - Với useCreateEmployee (tạo employee không có account): employee.id là "emp_xxx"
+    //   và có thể chưa có tài khoản → cần fallback về employee.uid hoặc báo lỗi.
+    const targetUid = (employee as { uid?: string }).uid || employee.id;
+    setSaving(true);
+    setError(null);
+    updatePermissions.mutateAsync(
+      { uid: targetUid, permissions, updatedBy: currentAdminUid },
+    ).then(() => {
+      onSaved();
+    }).catch((err) => {
+      setError(err instanceof Error ? err.message : String(err));
+      setSaving(false);
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100">
+              <Shield size={20} className="text-brand-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold">Phân quyền chi tiết</h2>
+              <p className="text-xs text-slate-500">
+                {employee.fullName} · <span className="font-mono">{employee.code}</span> · {ROLE_LABEL[employee.role]}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {isAdminUser ? (
+            <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Tài khoản <strong>Admin</strong> luôn có toàn quyền trên hệ thống và không thể bị hạn chế.
+            </div>
+          ) : (
+            <PermissionMatrix
+              role={employee.role}
+              uid={employee.id}
+              onSave={handleSave}
+              saving={saving}
+            />
+          )}
+        </div>
+
+        {error && (
+          <div className="border-t border-slate-200 bg-rose-50 px-5 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
+            Đóng
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -323,8 +511,11 @@ function CreateAccountModal({
       if (!form.department.trim()) throw new Error("Phòng ban không được để trống.");
       if (!form.role) throw new Error("Vai trò không được để trống.");
       if (!form.branch) throw new Error("Cơ sở không được để trống.");
+      if (!roleRequiresAccount(form.role)) {
+        throw new Error("Chỉ cấp quản lý mới được tạo tài khoản. Nhân viên thông thường sẽ không có tài khoản.");
+      }
 
-      const result = await createFirestoreAccount({
+      const result = await createEmployeeWithAccount({
         fullName: form.fullName.trim(),
         code: form.code.trim(),
         email: form.email.trim(),
@@ -337,11 +528,15 @@ function CreateAccountModal({
         branch: form.branch,
       });
 
-      setCreatedAccount({
+      // Lưu tạm thông tin tài khoản vào sessionStorage TRƯỚC KHI signOut
+      // vì signOut sẽ unmount component → state bị mất.
+      sessionStorage.setItem("createdAccount", JSON.stringify({
         email: result.email,
         password: result.password,
         uid: result.uid,
-      });
+      }));
+
+      await signOut();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Lỗi không xác định.";
       if (msg.includes("auth/email-already-exists") || msg.includes("email-already-exists")) {
@@ -352,73 +547,6 @@ function CreateAccountModal({
     } finally {
       setSubmitting(false);
     }
-  }
-
-  // Success state
-  if (createdAccount) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-        <div className="card w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
-              <CheckCircle size={20} className="text-emerald-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">Tạo tài khoản thành công!</h2>
-              <p className="text-sm text-slate-500">Gửi thông tin đăng nhập cho nhân viên</p>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 mb-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Email:</span>
-              <span className="font-mono text-sm font-medium">{createdAccount.email}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">Mật khẩu:</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-medium">
-                  {showPassword ? createdAccount.password : "••••••••"}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600">UID:</span>
-              <span className="font-mono text-xs text-slate-500">{createdAccount.uid}</span>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4">
-            <p className="text-xs text-amber-700">
-              <strong>Yêu cầu:</strong> Người dùng nên đổi mật khẩu sau khi đăng nhập lần đầu.
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `Email: ${createdAccount.email}\nMật khẩu: ${createdAccount.password}`
-                );
-              }}
-              className="flex-1 btn-secondary py-2"
-            >
-              <Copy size={14} /> Sao chép
-            </button>
-            <button onClick={onSuccess} className="flex-1 btn-primary py-2">
-              Xong
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (

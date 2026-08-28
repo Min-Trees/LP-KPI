@@ -18,6 +18,10 @@ export const MANAGER_ROLES: Role[] = [
   ROLE.PROGRAM_MANAGER_ST,
 ];
 
+export function roleRequiresAccount(role: Role): boolean {
+  return MANAGER_ROLES.includes(role) || role === ROLE.ADMIN;
+}
+
 export const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "Quản trị hệ thống",
   BOARD: "Ban Giám đốc",

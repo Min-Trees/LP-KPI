@@ -32,7 +32,7 @@ export function computeCriterionTotal(
 export function computeCriterionRecord(
   criterion: KpiCriterion,
   events: KpiEvent[],
-  maxScorePerCriterion: number,
+  _maxScorePerCriterion: number, // kept for API compatibility; cap removed to allow >110
   baseScore = DEFAULT_BASE_SCORE,
 ): KpiCriterionRecord {
   const dailyScores: Record<number, number> = {};
@@ -40,7 +40,12 @@ export function computeCriterionRecord(
     dailyScores[ev.date] = (dailyScores[ev.date] ?? 0) + ev.points;
   }
   const sum = Object.values(dailyScores).reduce((a, b) => a + b, 0);
-  const total = capScore(baseScore + sum, maxScorePerCriterion);
+
+  // Điều 5: "Có từ 02 biên bản xử lý kỷ luật trong quý → 0 điểm tiêu chí"
+  // Khi rule two_disciplines_quarter được áp dụng, criterion score về đúng 0
+  const hasZeroPenalty = events.some((e) => e.ruleCode === "two_disciplines_quarter");
+  // Không cap tối đa — cho phép vượt 110 để đạt xuất sắc
+  const total = hasZeroPenalty ? 0 : baseScore + sum;
 
   return {
     criterionId: criterion.id,
@@ -59,13 +64,15 @@ export function computeKpiScore(records: KpiCriterionRecord[]): number {
 }
 
 export function defaultRankingRules(): RankingRules {
+  // Điều 8 - Phần A: Bảng quy đổi mức thưởng
   const bands: RankingBand[] = [
-    { min: 100.01, max: Infinity, label: "Xuất sắc (>100)", bonusPercent: 105, rank: "XUAT_SAC" },
-    { min: 95, max: 100, label: "Tốt (95-100)", bonusPercent: 100, rank: "TOT" },
-    { min: 90, max: 94.99, label: "Tốt (90-94)", bonusPercent: 90, rank: "TOT" },
-    { min: 80, max: 89.99, label: "Đạt (80-89)", bonusPercent: 70, rank: "DAT" },
-    { min: 70, max: 79.99, label: "Đạt (70-79)", bonusPercent: 50, rank: "DAT" },
-    { min: 0, max: 69.99, label: "Cần cải thiện (<70)", bonusPercent: 0, rank: "CAN_CAI_THIEN" },
+    { min: 110.01, max: Infinity, label: ">110 điểm", bonusPercent: 115, rank: "XUAT_SAC" },
+    { min: 101, max: 110, label: "101–110 điểm", bonusPercent: 110, rank: "XUAT_SAC" },
+    { min: 91, max: 100, label: "91–100 điểm", bonusPercent: 100, rank: "TOT" },
+    { min: 81, max: 90.99, label: "81–90 điểm", bonusPercent: 90, rank: "DAT" },
+    { min: 71, max: 80.99, label: "71–80 điểm", bonusPercent: 70, rank: "DAT" },
+    { min: 61, max: 70.99, label: "61–70 điểm", bonusPercent: 50, rank: "CAN_CAI_THIEN" },
+    { min: 0, max: 60.99, label: "<60 điểm", bonusPercent: 0, rank: "CAN_CAI_THIEN" },
   ];
   return {
     id: "default",

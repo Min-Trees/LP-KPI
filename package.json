@@ -6,7 +6,7 @@
   "description": "Hệ thống quản lý KPI nội bộ - React + Firebase",
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js",
-    "build": "tsc -b && vite build",
+    "build": "node node_modules/typescript/bin/tsc -b && node node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit",
@@ -52,8 +52,8 @@
     "postcss": "^8.4.49",
     "source-map": "^0.8.0",
     "tailwindcss": "^3.4.14",
-    "tsx": "^4.19.2",
-    "typescript": "^5.6.3",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
     "vite": "^5.4.11"
   }
 }
